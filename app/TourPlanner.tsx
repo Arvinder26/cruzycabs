@@ -39,7 +39,7 @@ function directDistanceKm(from: { latitude: number; longitude: number }, to: { l
   return radius * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-export function TourPlanner() {
+export function TourPlanner({submissionAvailable=true}:{submissionAvailable?:boolean}) {
   const [selected, setSelected] = useState<string[]>(["hobbiton", "rotorua"]);
   const [customStops, setCustomStops] = useState<AddressSelection[]>([]);
   const [customValue, setCustomValue] = useState("");
@@ -181,6 +181,6 @@ export function TourPlanner() {
         <p className="tour-assurance">No payment today. A planner confirms timing, inclusions and the final quote before you commit.</p>
       </div>
     </form>
-    {brief && <EnquiryForm kind="tour" initialDetails={brief} title="Send your tour brief to operations" />}
+    {brief && <EnquiryForm kind="tour" initialDetails={brief} title="Send your tour brief to operations" submissionAvailable={submissionAvailable} />}
   </section>;
 }

@@ -163,7 +163,7 @@ function AirportShortcutCards({
   </fieldset></details>;
 }
 
-export function KauriRideApp({onlinePricingAvailable=false}:{onlinePricingAvailable?:boolean}) {
+export function KauriRideApp({onlinePricingAvailable=false,requestSubmissionAvailable=true}:{onlinePricingAvailable?:boolean;requestSubmissionAvailable?:boolean}) {
   const [journey, setJourney] = useState(initialJourney);
   const [quote, setQuote] = useState<Quote | null>(null);
   const [step, setStep] = useState<"journey" | "vehicle" | "details" | "confirmed">("journey");
@@ -319,7 +319,7 @@ export function KauriRideApp({onlinePricingAvailable=false}:{onlinePricingAvaila
           <p className="hero-intro">Local rides, airport transfers and private North Island journeys, with a professional driver and a clear price before you confirm.</p>
           <div className="availability-note">
             <span className="status-dot" aria-hidden="true" />
-            <span>Booking requests are open. Driver details are shared after confirmation.</span>
+            <span>{requestSubmissionAvailable?"Booking requests are open. Driver details are shared after confirmation.":"Online bookings are being activated. Contact operations for journey enquiries."}</span>
           </div>
           <a className="button button-light hero-book-link" href="#journey-form">Start my booking <span aria-hidden="true">↓</span></a>
           <div className="route-art" aria-hidden="true">
@@ -466,7 +466,7 @@ export function KauriRideApp({onlinePricingAvailable=false}:{onlinePricingAvaila
         </div>
       </section>
 
-      {enquiry && <EnquiryForm kind="journey" initialDetails={enquiry} title="Send your journey to operations" />}
+      {enquiry && <EnquiryForm kind="journey" initialDetails={enquiry} title="Send your journey to operations" submissionAvailable={requestSubmissionAvailable} />}
       <section className="trust-strip" aria-label="Service commitments">
         <span><b>01</b> Driver checks required</span><span><b>02</b> Upfront total</span><span><b>03</b> Guest booking</span><span><b>04</b> Human support</span>
       </section>

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { KauriRideApp } from "./KauriRideApp";
-import { setting } from "../lib/config";
+import { setting,databaseConfigured } from "../lib/config";
 
 export const metadata: Metadata = {
   title: "Book an Auckland ride",
@@ -10,5 +10,5 @@ export const metadata: Metadata = {
 };
 
 export default function Home() {
-  return <KauriRideApp onlinePricingAvailable={Boolean(setting("GOOGLE_MAPS_API_KEY"))} />;
+  return <KauriRideApp onlinePricingAvailable={databaseConfigured()&&Boolean(setting("GOOGLE_MAPS_API_KEY"))} requestSubmissionAvailable={databaseConfigured()} />;
 }

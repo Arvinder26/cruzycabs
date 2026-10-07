@@ -31,7 +31,9 @@ export function email(value: unknown) { const v = text(value,"Email",254).toLowe
 export function phone(value: unknown) { const v=text(value,"Mobile number",30).replace(/[\s()-]/g,""); if (!/^\+[1-9]\d{7,14}$/.test(v)) throw new HttpError("Use an international phone number, such as +64211234567."); return v; }
 export function sameOrigin(request: Request) {
   const origin = request.headers.get("origin");
-  if (!origin || origin !== siteOrigin()) throw new HttpError("Request origin is not allowed.",403);
+  const trusted=[siteOrigin()];
+  if(setting("VERCEL")==="1")for(const key of ["VERCEL_URL","VERCEL_BRANCH_URL","VERCEL_PROJECT_PRODUCTION_URL"]){const host=setting(key);if(host&&/^[a-z0-9.-]+\.vercel\.app$/i.test(host))trusted.push(`https://${host}`);}
+  if (!origin || !trusted.includes(origin)) throw new HttpError("Request origin is not allowed.",403);
 }
 export function token() { return Array.from(crypto.getRandomValues(new Uint8Array(32)),b=>b.toString(16).padStart(2,"0")).join(""); }
 export async function sha(value: string) { return hex(await crypto.subtle.digest("SHA-256",new TextEncoder().encode(value))); }

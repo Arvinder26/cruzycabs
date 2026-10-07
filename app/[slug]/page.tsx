@@ -11,6 +11,7 @@ import { activePricing } from "../../lib/pricing-store";
 import { ensurePlatform } from "../../lib/platform";
 import { customerPageCopy } from "../../lib/customer-page-copy";
 import { HelpCentre } from "../HelpCentre";
+import { databaseConfigured } from "../../lib/config";
 
 type PageContent = { title: string; eyebrow: string; intro: string; facts: [string, string][]; action: string; note?: string; image?: string; imageAlt?: string; visualLabel?: string };
 
@@ -48,7 +49,8 @@ export default async function ContentPage({ params }: { params: Promise<{ slug: 
   const canonical=pages[slug]?slug:aliases[slug]||slug;
   const supportPage=canonical==="help";
   const compactPage=["help","privacy","terms","lost-property","complaints","accessibility-statement","driver-application","partner-fleet-application","pricing","safety"].includes(canonical);
-  let rates=defaultPricing;if(slug==="pricing"){await ensurePlatform();rates=await activePricing();}
+  const storageReady=databaseConfigured();
+  let rates=defaultPricing;if(slug==="pricing"&&storageReady){await ensurePlatform();rates=await activePricing();}
   const image = page.image || "/images/kauri-route-panorama.webp";
   const imageAlt = page.imageAlt || "cruzycabs journey from Auckland into the North Island";
   const imageSize = image.includes("north-island-map") ? [1122, 1402] : image.includes("private-tour-hero") ? [1536, 1024] : [1774, 887];
@@ -64,8 +66,8 @@ export default async function ContentPage({ params }: { params: Promise<{ slug: 
     {supportPage&&<HelpCentre/>}
     {page.facts.length>0&&<section className="content-facts">{page.facts.map(([title,text], index) => <article key={title}><span>0{index + 1}</span><h2>{title}</h2><p>{text}</p></article>)}</section>}
     {slug === "airport-transfers" && <AirportGuide />}
-    {slug === "private-tours" && <TourPlanner />}
-    {enquiryKind && <EnquiryForm kind={enquiryKind} title={supportPage?"Send us a message":page.action} />}
+    {slug === "private-tours" && <TourPlanner submissionAvailable={storageReady} />}
+    {enquiryKind && <EnquiryForm kind={enquiryKind} title={supportPage?"Send us a message":page.action} submissionAvailable={storageReady} />}
     {["terms","privacy"].includes(aliases[slug]||slug) && <PolicyDetails kind={aliases[slug]||slug} />}
     {slug === "pricing" && <section className="pricing-details section-pad">
       <div className="section-heading split"><div><span className="eyebrow">Pricing version {rates.version}</span><h2>Every rate,<br />in plain sight.</h2></div><p>These are the current server rates. Online quotes use road distance and travel time when the routing provider is connected. Specialised journeys require review.</p></div>

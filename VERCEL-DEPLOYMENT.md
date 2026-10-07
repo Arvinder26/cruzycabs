@@ -22,3 +22,11 @@ Updated 7 October 2026. Hosting target is now Vercel, as requested.
 7. Add cruzycabs.co.nz in Vercel Domains and copy the exact supplied DNS records to Squarespace. Preserve Google Workspace MX/TXT email records; changing website hosting does not require changing mail hosting.
 
 Stripe, maps, Resend, legal details and operational sign-off remain required for a real booking service. Creating the Vercel project does not mean the app is deployed.
+
+## Deployment progress
+
+The code is uploaded to private repository https://github.com/Arvinder26/cruzycabs using existing Git credentials. The original GitHub connector remains unable to see the new private repository; this did not prevent the Git upload or Vercel Git-source deployment.
+
+Vercel successfully built deployment dpl_A2DSqTiGyBBxTve2n4yEfKyQ5sSB from commit 9c3970f. A final follow-up release adds clear activation messaging when storage is absent and trusted platform origins. Base settings and encrypted signing/jobs secrets are provisioned; no secrets are committed.
+
+cruzycabs.co.nz and www.cruzycabs.co.nz are attached to the Vercel project. Squarespace DNS changes are still needed. Do not change Google Workspace MX/TXT records. Vercel Blob creation was denied by the connector and local CLI; a hosted Turso database and provider credentials are still absent. The deployed public pages are a website preview, not an active booking service.

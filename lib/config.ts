@@ -5,6 +5,7 @@ export function setting(name: string, fallback = "") {
   return typeof value === "string" ? value : fallback;
 }
 export function localPreview() { return setting("LOCAL_PREVIEW") === "true" && process.env.NODE_ENV === "development"; }
+export function databaseConfigured(){return Boolean(env.DB||setting("TURSO_DATABASE_URL"));}
 export function siteOrigin() {
   const value = setting("SITE_URL");
   if (!value && localPreview()) return "http://localhost:3000";
