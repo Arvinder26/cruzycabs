@@ -19,6 +19,7 @@
   },
   "dependencies": {
     "@libsql/client": "^0.18.0",
+    "@tursodatabase/serverless": "^1.4.0",
     "@vercel/blob": "^2.8.0",
     "drizzle-orm": "0.45.2",
     "next": "^16.3.8",

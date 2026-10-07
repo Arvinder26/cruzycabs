@@ -1,4 +1,5 @@
 import { ensureCoreSchema, getD1 } from "./d1";
+import { setting } from "./config";
 import { HttpError, sha } from "./security";
 
 export const platformSchema = [
@@ -29,7 +30,7 @@ export async function ensurePlatform() {
   await ready;
 }
 export async function rateLimit(request:Request,bucket:string,limit=30,seconds=60) {
-  await ensurePlatform(); const ip=request.headers.get("cf-connecting-ip") || "local";
+  await ensurePlatform(); const ip=(setting("VERCEL")==="1"?request.headers.get("x-forwarded-for")?.split(",")[0].trim():request.headers.get("cf-connecting-ip")) || "local";
   const now=Math.floor(Date.now()/1000); const window=Math.floor(now/seconds); const key=await sha(`${bucket}:${ip}:${window}`);
   const row=await getD1().prepare(`INSERT INTO app_limits(key,count,expires) VALUES (?,1,?) ON CONFLICT(key) DO UPDATE SET count=count+1 RETURNING count`).bind(key,now+seconds).first<{count:number}>();
   if(!row || row.count>limit) throw new HttpError("Too many requests. Please try again shortly.",429);
