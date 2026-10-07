@@ -4,7 +4,7 @@
 
 Implementation uses the real provider interfaces, with credentials configured separately. Local automated verification uses provider mocks. The site has not been published or tested against live Stripe, Google, Resend, or production Cloudflare resources.
 
-Domain: cruzycabs.co.nz. Support: operations@cruzycabs.com. Hours: 24/7. Legal business name and support phone remain unspecified. Stripe business verification remains pending; use test mode until Stripe enables live payments.
+Domain: cruzycabs.co.nz. Support: operations@cruzycabs.co.nz. Hours: 24/7. Legal business name and support phone remain unspecified. Stripe business verification remains pending; use test mode until Stripe enables live payments.
 
 ## Activate infrastructure
 

@@ -5,7 +5,7 @@ This report covers the rebranding and deployment work completed in this chat. Th
 ## Brand and public website
 
 - Changed the customer-facing name to cruzycabs, including navigation, footer, page titles, booking communications and application metadata.
-- Set the production website to https://cruzycabs.co.nz, support email to operations@cruzycabs.com and operating hours to 24/7. Removed the placeholder support phone.
+- Set the production website to https://cruzycabs.co.nz, support email to operations@cruzycabs.co.nz and operating hours to 24/7. Removed the placeholder support phone.
 - Updated canonical URLs, sitemap, robots rules, application icons and manifest. Customer and staff pages are excluded from indexing.
 - Added real enquiry forms for journeys, accessibility, tours, corporate travel, support, lost property, complaints, privacy, driver applications and partner enquiries. Submission creates a saved case/reference.
 - Changed tour submission into an operations enquiry with the itinerary, rather than implying a completed reservation.

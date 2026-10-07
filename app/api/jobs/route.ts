@@ -11,7 +11,7 @@ export async function runJobs(){
   for(const item of cancelled.results||[]){const row=await findBooking(item.reference);if(row)try{await cancelBooking(row,"recovery-job");}catch{console.error(JSON.stringify({event:"refund.retry_failed",reference:item.reference}));}}
   await getD1().prepare(`DELETE FROM app_session_assurance WHERE expires<?`).bind(Date.now()).run();
   const atRisk=await getD1().prepare(`SELECT b.id,b.reference FROM bookings b JOIN app_booking_details d ON d.booking_id=b.id WHERE b.status IN ('awaiting_dispatch','offered') AND (d.scheduled_at IS NOT NULL AND d.scheduled_at<? OR d.scheduled_at IS NULL AND b.created_at<?) LIMIT 100`).bind(new Date(Date.now()+30*60000).toISOString(),new Date(Date.now()-5*60000).toISOString()).all<{id:string;reference:string}>();
-  for(const row of atRisk.results||[])await queueEmail(`risk:${row.id}`,setting("SUPPORT_EMAIL","operations@cruzycabs.com"),`Action required: ${row.reference} needs a driver`,`Review ${row.reference} in the dispatch workspace. Confirm availability or cancel and refund if it cannot be fulfilled.`).run();
+  for(const row of atRisk.results||[])await queueEmail(`risk:${row.id}`,setting("SUPPORT_EMAIL","operations@cruzycabs.co.nz"),`Action required: ${row.reference} needs a driver`,`Review ${row.reference} in the dispatch workspace. Confirm availability or cancel and refund if it cannot be fulfilled.`).run();
   return deliverOutbox();
 }
 export function POST(request:Request){return endpoint(async()=>{const secret=setting("JOBS_SECRET");if(secret.length<32||!equal(bearer(request),secret))throw new HttpError("Not authorised.",403);return json(await runJobs());});}

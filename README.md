@@ -2,7 +2,7 @@ The requested deployment target is now Vercel. See [VERCEL-DEPLOYMENT.md](VERCEL
 
 # cruzycabs
 
-Taxi booking and operations website for https://cruzycabs.co.nz. Contact: operations@cruzycabs.com, operating 24/7.
+Taxi booking and operations website for https://cruzycabs.co.nz. Contact: operations@cruzycabs.co.nz, operating 24/7.
 
 ## Develop
 

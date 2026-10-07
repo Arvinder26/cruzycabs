@@ -12,7 +12,7 @@ export function HelpCentre() {
   return <>
     <section className="support-shortcuts" aria-label="Booking support options">
       <Link href="/manage-booking"><span aria-hidden="true">↗</span><h2>Manage your booking</h2><p>Check status, make payment or cancel.</p><strong>Open booking management →</strong></Link>
-      <a href="mailto:operations@cruzycabs.com"><span aria-hidden="true">✉</span><h2>Contact operations</h2><p>Journey changes and booking questions, 24/7.</p><strong>operations@cruzycabs.com →</strong></a>
+      <a href="mailto:operations@cruzycabs.co.nz"><span aria-hidden="true">✉</span><h2>Contact operations</h2><p>Journey changes and booking questions, 24/7.</p><strong>operations@cruzycabs.co.nz →</strong></a>
       <Link href="/lost-property"><span aria-hidden="true">⌕</span><h2>Lost something?</h2><p>Send your trip reference and item details.</p><strong>Report lost property →</strong></Link>
     </section>
     <section className="faq-section section-pad"><div className="section-heading"><span className="eyebrow">Before you travel</span><h2>Answers to common questions.</h2><p>Need something else? Send a message below and include your booking reference if you have one.</p></div><div className="faq-list">{questions.map(([question,answer])=><details key={question}><summary>{question}<span aria-hidden="true">+</span></summary><p>{answer}</p></details>)}</div></section>
