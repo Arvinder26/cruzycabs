@@ -1,0 +1,5 @@
+import { getD1 } from "../../../lib/d1";
+import { identity } from "../../../lib/auth";
+import { audit,rateLimit } from "../../../lib/platform";
+import { endpoint,HttpError,json,readObject,sameOrigin,text } from "../../../lib/security";
+export function POST(request:Request){return endpoint(async()=>{sameOrigin(request);await rateLimit(request,"account",20);const user=await identity(request.headers);if(!user)throw new HttpError("Sign in first.",401);const body=await readObject(request),id=crypto.randomUUID();if(body.action==="delete_place"){const place=text(body.id,"Place",64);await getD1().batch([getD1().prepare(`DELETE FROM app_saved_places WHERE id=? AND email=?`).bind(place,user.email),audit("saved_place",place,"place.deleted",user.email)]);return json({ok:true});}if(body.action!=="save_place")throw new HttpError("Invalid action.");const label=text(body.label,"Label",50),address=text(body.address,"Address",250);await getD1().prepare(`INSERT INTO app_saved_places(id,email,label,address,created_at) VALUES(?,?,?,?,?)`).bind(id,user.email,label,address,new Date().toISOString()).run();return json({ok:true},201);});}
