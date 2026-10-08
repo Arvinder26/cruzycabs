@@ -1,6 +1,6 @@
 "use client";
 
-import { KeyboardEvent, useEffect, useId, useState } from "react";
+import { KeyboardEvent, useEffect, useId, useRef, useState } from "react";
 
 export type AddressSelection = {
   id: string;
@@ -42,6 +42,9 @@ export function AddressAutocomplete({
   const [searchFailed, setSearchFailed] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
   const [attribution,setAttribution] = useState("");
+  const detailRequest = useRef<AbortController | null>(null);
+
+  useEffect(() => () => detailRequest.current?.abort(), []);
 
   const trimmedValue = value.trim();
   const hasConfirmedValue = Boolean(selection && selection.label === value);
@@ -56,19 +59,19 @@ export function AddressAutocomplete({
     const timer = window.setTimeout(async () => {
       setLoading(true);
       setSearchFailed(false);
-      setOpen(true);
       try {
         const response = await fetch(`/api/addresses?q=${encodeURIComponent(trimmedValue)}`, {
           signal: controller.signal,
         });
         const data = (await response.json()) as { suggestions?: AddressSelection[]; attribution?: string };
+        if (controller.signal.aborted) return;
         if (!response.ok) throw new Error("Address search unavailable");
         const nextSuggestions = data.suggestions ?? [];
         setSuggestions(nextSuggestions);
         setAttribution(data.attribution||"");
         setActiveIndex(nextSuggestions.length ? 0 : nextSuggestions.length);
-      } catch (caught) {
-        if (caught instanceof DOMException && caught.name === "AbortError") return;
+      } catch {
+        if (controller.signal.aborted) return;
         setSuggestions([]);
         setSearchFailed(true);
         setActiveIndex(0);
@@ -78,7 +81,7 @@ export function AddressAutocomplete({
           setSearched(true);
         }
       }
-    }, 350);
+    }, 180);
 
     return () => {
       window.clearTimeout(timer);
@@ -86,11 +89,28 @@ export function AddressAutocomplete({
     };
   }, [hasConfirmedValue, trimmedValue]);
 
-  function chooseSuggestion(nextSelection: AddressSelection) {
-    onSelect(nextSelection);
+  async function chooseSuggestion(nextSelection: AddressSelection) {
+    detailRequest.current?.abort();
+    const controller = new AbortController();
+    detailRequest.current = controller;
     setSuggestions([]);
     setOpen(false);
     setActiveIndex(-1);
+    if (nextSelection.source === "google" && nextSelection.latitude === null) {
+      setLoading(true);
+      try {
+        const response = await fetch(`/api/addresses?placeId=${encodeURIComponent(nextSelection.id)}`, { signal: controller.signal });
+        if (response.ok) {
+          const location = await response.json() as { latitude: number; longitude: number };
+          if (Number.isFinite(location.latitude) && Number.isFinite(location.longitude)) nextSelection = { ...nextSelection, ...location };
+        }
+      } catch {
+        // A complete suggested address still works for server-side road routing.
+      }
+    }
+    if (controller.signal.aborted) return;
+    setLoading(false);
+    onSelect(nextSelection);
   }
 
   function chooseManualValue() {
@@ -143,8 +163,9 @@ export function AddressAutocomplete({
           id={inputId}
           value={value}
           onChange={(event) => {
+            detailRequest.current?.abort();
             onChange(event.target.value);
-            setSuggestions([]);setLoading(false);setSearched(false);setSearchFailed(false);setActiveIndex(-1);
+            setSuggestions([]);setLoading(event.target.value.trim().length >= 3);setSearched(false);setSearchFailed(false);setActiveIndex(-1);
             setOpen(event.target.value.trim().length >= 3);
           }}
           onFocus={() => {
@@ -220,7 +241,7 @@ export function AddressAutocomplete({
             : "✓ Address confirmed"
           : trimmedValue.length > 0 && trimmedValue.length < 3
             ? "Type at least 3 characters to search"
-            : "Start typing, then choose an address to confirm it"}
+            : "Search a New Zealand address, place or business"}
       </span>
     </div>
   );

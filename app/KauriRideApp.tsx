@@ -7,6 +7,7 @@ import { FormEvent, useMemo, useState } from "react";
 import { AddressAutocomplete, type AddressSelection } from "./AddressAutocomplete";
 import { SiteHeader } from "./SiteHeader";
 import { EnquiryForm } from "./EnquiryForm";
+import { VehicleIcon, WheelchairIcon } from "./VehicleIcon";
 
 type QuoteVehicle = {
   id: string;
@@ -314,7 +315,7 @@ export function KauriRideApp({onlinePricingAvailable=false,requestSubmissionAvai
 
       <section className="hero" id="booking">
         <div className="hero-copy">
-          <p className="eyebrow">Every road. One trusted ride.</p>
+          <p className="eyebrow">Be choosy. Ride Cruzy.</p>
           <h1>Book the ride.<br />Know the total.</h1>
           <p className="hero-intro">Local rides, airport transfers and private North Island journeys, with a professional driver and a clear price before you confirm.</p>
           <div className="availability-note">
@@ -436,7 +437,7 @@ export function KauriRideApp({onlinePricingAvailable=false,requestSubmissionAvai
               {bookingForOther && <p>Enter the passenger contact details below. Their email receives the private booking link and payment updates. Add coordinator instructions in the notes.</p>}
               <label>Passenger name<input required maxLength={100} value={customer.name} onChange={(e) => setCustomer({ ...customer, name: e.target.value })} autoComplete="name" /></label>
               <div className="form-row">
-                <label>Mobile number<input required value={customer.phone} onChange={(e) => setCustomer({ ...customer, phone: e.target.value })} type="tel" autoComplete="tel" placeholder="e.g. +64 21 123 4567" /></label>
+                <label>Mobile number<input required value={customer.phone} onChange={(e) => setCustomer({ ...customer, phone: e.target.value })} type="tel" autoComplete="tel" placeholder="e.g. 027 123 4567" /><small className="phone-help">NZ numbers are welcome — no +64 needed.</small></label>
                 <label>Email address<input required maxLength={254} value={customer.email} onChange={(e) => setCustomer({ ...customer, email: e.target.value })} type="email" autoComplete="email" /></label>
               </div>
               <label>Pickup or assistance notes <span className="optional">optional</span><textarea value={customer.notes} onChange={(e) => setCustomer({ ...customer, notes: e.target.value })} placeholder="Entrance, landmark or anything that would make the trip easier" /></label>
@@ -494,12 +495,12 @@ export function KauriRideApp({onlinePricingAvailable=false,requestSubmissionAvai
 
       <section className="vehicles section-pad">
         <div className="section-heading split"><div><span className="eyebrow">Matched to the journey</span><h2>Space, access and comfort<br />made clear.</h2></div><p>Capacity means real passengers and practical luggage, not optimistic marketing.</p></div>
-        <div className="vehicle-preview-grid">{vehiclePreviews.map(([name, capacity, note], index) => <article key={name}><div className={`vehicle-shape shape-${index}`}><i /><i /></div><span>0{index + 1}</span><h3>{name}</h3><strong>{capacity}</strong><p>{note}</p></article>)}</div>
+        <div className="vehicle-preview-grid">{vehiclePreviews.map(([name, capacity, note], index) => <article key={name}><VehicleIcon kind={(["car", "van", "accessible", "executive"] as const)[index]} /><span>0{index + 1}</span><h3>{name}</h3><strong>{capacity}</strong><p>{note}</p></article>)}</div>
       </section>
 
       <section className="access-feature section-pad">
-        <div><span className="access-symbol" aria-hidden="true">♿</span><span className="eyebrow">Accessible travel</span><h2>Tell us what<br />would make the trip easier.</h2></div>
-        <div><p>Accessibility is part of matching, not a note a driver discovers at pickup.</p><ul><li>Ramp or hoist requirements</li><li>Passenger remaining in wheelchair</li><li>Service animals and support people</li><li>Extra boarding time and assistance</li></ul><Link href="#journey-form" className="button button-light" onClick={() => update("accessible", true)}>Book an accessible vehicle</Link></div>
+        <div className="access-intro"><span className="access-icon"><WheelchairIcon /></span><span className="eyebrow">Accessible travel</span><h2>A smoother trip,<br />built around you.</h2><p>Tell us what would make your journey easier. We’ll match the vehicle and assistance to your needs.</p></div>
+        <div className="access-details"><h3>Plan your support before pickup</h3><ul><li>Ramp or hoist requirements</li><li>Passenger remaining in wheelchair</li><li>Service animals and support people</li><li>Extra boarding time and assistance</li></ul><Link href="#journey-form" className="button button-primary" onClick={() => update("accessible", true)}>Book an accessible vehicle <span aria-hidden="true">→</span></Link></div>
       </section>
 
       <section className="north-island section-pad">

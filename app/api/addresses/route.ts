@@ -1,10 +1,13 @@
 export const runtime = "nodejs";
-import { localPreview,setting } from "../../../lib/config";
+import { databaseConfigured,setting } from "../../../lib/config";
 import { endpoint,HttpError,json } from "../../../lib/security";
 import { rateLimit } from "../../../lib/platform";
 
 const PHOTON_API = "https://photon.komoot.io/api";
 const AUCKLAND = { latitude: -36.8485, longitude: 174.7633 };
+// Address suggestions remain usable while booking storage is being configured.
+let previewWindow = 0;
+let previewSearches = 0;
 
 type PhotonProperties = {
   name?: string;
@@ -39,6 +42,7 @@ function uniqueParts(parts: Array<string | undefined>) {
 
 function formatFeature(feature: PhotonFeature) {
   const properties = feature.properties ?? {};
+  if (properties.countrycode?.toUpperCase() !== "NZ" || properties.name?.toLowerCase() === "new zealand") return null;
   const coordinates = feature.geometry?.coordinates;
   if (!coordinates || coordinates.length < 2) return null;
 
@@ -72,8 +76,27 @@ function formatFeature(feature: PhotonFeature) {
 }
 
 export function GET(request: Request) { return endpoint(async () => {
-  await rateLimit(request,"addresses",60);
-  const query = new URL(request.url).searchParams.get("q")?.trim() ?? "";
+  if (databaseConfigured()) await rateLimit(request,"addresses",60);
+  else {
+    const window = Math.floor(Date.now() / 60000);
+    if (previewWindow !== window) { previewWindow = window; previewSearches = 0; }
+    if (++previewSearches > 60) throw new HttpError("Too many address searches. Please try again shortly.", 429);
+  }
+  const params = new URL(request.url).searchParams;
+  const googleKey = setting("GOOGLE_MAPS_API_KEY");
+  const placeId = params.get("placeId");
+  if (placeId) {
+    if (!googleKey || placeId.length > 256) throw new HttpError("Place details unavailable.", 400);
+    const response = await fetch(`https://places.googleapis.com/v1/places/${encodeURIComponent(placeId)}`, {
+      headers: { "X-Goog-Api-Key": googleKey, "X-Goog-FieldMask": "location,addressComponents" },
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!response.ok) throw new HttpError("Place details unavailable.", 502);
+    const place = await response.json() as { location?: { latitude: number; longitude: number }; addressComponents?: { types: string[]; shortText: string }[] };
+    if (!place.addressComponents?.some(component => component.types.includes("country") && component.shortText === "NZ") || !place.location || !Number.isFinite(place.location.latitude) || !Number.isFinite(place.location.longitude)) throw new HttpError("Choose a New Zealand location.", 422);
+    return json(place.location);
+  }
+  const query = params.get("q")?.trim() ?? "";
   if (query.length < 3) {
     return Response.json({ error: "Enter at least 3 characters to search for an address." }, { status: 400 });
   }
@@ -81,15 +104,27 @@ export function GET(request: Request) { return endpoint(async () => {
     return Response.json({ error: "The address search is too long." }, { status: 400 });
   }
 
-  const googleKey=setting("GOOGLE_MAPS_API_KEY");
   if(googleKey){
-    const url=new URL("https://maps.googleapis.com/maps/api/geocode/json");url.searchParams.set("address",query);url.searchParams.set("components","country:NZ");url.searchParams.set("key",googleKey);
-    const r=await fetch(url,{signal:AbortSignal.timeout(5000)});if(!r.ok)throw new HttpError("Address search unavailable.",502);
-    const data=await r.json() as {status:string;results:{place_id:string;formatted_address:string;geometry:{location:{lat:number;lng:number}}}[]};
-    if(!["OK","ZERO_RESULTS"].includes(data.status))throw new HttpError("Address search unavailable.",502);
-    return json({suggestions:data.results.slice(0,6).map(place=>({id:place.place_id,label:place.formatted_address,primary:place.formatted_address,secondary:"New Zealand",latitude:place.geometry.location.lat,longitude:place.geometry.location.lng,source:"google"})),attribution:"Google Maps"});
+    try {
+    const response = await fetch("https://places.googleapis.com/v1/places:autocomplete", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Goog-Api-Key": googleKey },
+      body: JSON.stringify({ input: query, includedRegionCodes: ["nz"], regionCode: "nz", languageCode: "en", locationBias: { circle: { center: AUCKLAND, radius: 50000 } } }),
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!response.ok) throw new HttpError("Address suggestions are unavailable. You can enter your NZ address manually.", 502);
+    type Prediction = { placeId: string; types?: string[]; text: { text: string }; structuredFormat?: { mainText?: { text: string }; secondaryText?: { text: string } } };
+    const data = await response.json() as { suggestions?: { placePrediction?: Prediction }[] };
+    const suggestions = (data.suggestions ?? []).flatMap(({ placePrediction: place }) => {
+      if (!place || place.types?.includes("country") || place.text.text.trim().toLowerCase() === "new zealand") return [];
+      return [{ id: place.placeId, label: place.text.text, primary: place.structuredFormat?.mainText?.text || place.text.text, secondary: place.structuredFormat?.secondaryText?.text || "New Zealand", latitude: null, longitude: null, source: "google" }];
+    });
+    return json({ suggestions, attribution: "Google Maps" });
+    } catch {
+      // Keep autocomplete available if Places has not yet been enabled for the key.
+    }
   }
-  const configured=setting("PHOTON_API_URL");if(!configured&&!localPreview())throw new HttpError("Address search is unavailable. You can enter your address manually.",503);
+  const configured=setting("PHOTON_API_URL");
   const endpoint = new URL(configured || PHOTON_API);
   if(endpoint.protocol!=="https:")throw new HttpError("Address provider must use HTTPS.",503);
   endpoint.searchParams.set("q", query);

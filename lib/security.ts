@@ -28,7 +28,16 @@ export function text(value: unknown, label: string, max = 250, optional = false)
   return value.trim();
 }
 export function email(value: unknown) { const v = text(value,"Email",254).toLowerCase(); if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) throw new HttpError("Enter a valid email address."); return v; }
-export function phone(value: unknown) { const v=text(value,"Mobile number",30).replace(/[\s()-]/g,""); if (!/^\+[1-9]\d{7,14}$/.test(v)) throw new HttpError("Use an international phone number, such as +64211234567."); return v; }
+export function phone(value: unknown) {
+  let v = text(value, "Phone number", 30).replace(/[\s()-]/g, "");
+  if (/^0(?:2\d{7,9}|[34679]\d{7})$/.test(v)) v = `+64${v.slice(1)}`;
+  else if (/^64(?:2\d{7,9}|[34679]\d{7})$/.test(v)) v = `+${v}`;
+  else if (v.startsWith("0064")) v = `+${v.slice(2)}`;
+  const validNZ = /^\+64(?:2\d{7,9}|[34679]\d{7})$/.test(v);
+  const validInternational = !v.startsWith("+64") && /^\+[1-9]\d{7,14}$/.test(v);
+  if (!validNZ && !validInternational) throw new HttpError("Enter a valid NZ number, such as 027 123 4567, or an international number with +country code.");
+  return v;
+}
 export function sameOrigin(request: Request) {
   const origin = request.headers.get("origin");
   const trusted=[siteOrigin()];

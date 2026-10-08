@@ -81,7 +81,7 @@ export default async function ContentPage({ params }: { params: Promise<{ slug: 
       <div className="vehicle-factors"><span>Car 1.00×</span><span>Van 1.48×</span><span>Accessible 1.36×</span><span>Executive 1.72×</span></div>
       <p className="pricing-note">GST is included. Live demand pricing is not applied. Your quote itemises allowances and vehicle factors.</p>
     </section>}
-    {page.note && <aside className="review-callout"><strong>Review before launch</strong><p>{page.note}</p></aside>}
+    {page.note && canonical !== "accessible-travel" && <aside className="review-callout"><strong>Review before launch</strong><p>{page.note}</p></aside>}
     <section className="content-cta"><span className="eyebrow">Ready when you are</span><h2>{slug === "private-tours" ? "Turn your destination wish list into a private itinerary." : "See the full price before you confirm."}</h2><a className="button button-light" href={slug === "private-tours" ? "#tour-planner" : "/#journey-form"}>{slug === "private-tours" ? "Build my tour" : "Start a booking"}</a></section>
   </main>;
 }

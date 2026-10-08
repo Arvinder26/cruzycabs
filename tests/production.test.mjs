@@ -14,8 +14,25 @@ class Statement{
 const db={prepare:sql=>new Statement(sql),batch:async statements=>{sqlite.exec('BEGIN');try{const results=statements.map(s=>({success:true,results:sqlite.prepare(s.sql).all(...s.values)}));sqlite.exec('COMMIT');return results;}catch(e){sqlite.exec('ROLLBACK');throw e;}}};
 globalThis.__testEnv={DB:db,SITE_URL:'https://cruzycabs.co.nz',APP_SIGNING_SECRET:'a'.repeat(64),JOBS_SECRET:'b'.repeat(64),GOOGLE_MAPS_API_KEY:'test-google',STRIPE_SECRET_KEY:'sk_test_fixture',STRIPE_MODE:'test',STRIPE_WEBHOOK_SECRET:'whsec_fixture',RESEND_API_KEY:'test-resend',EMAIL_FROM:'test@example.invalid',STAFF_ROLE_BINDINGS:'admin@example.invalid:admin|dispatch,driver@example.invalid:driver,other@example.invalid:driver,partner@example.invalid:partner'};
 const sessions=new Map(),intents=new Map(),refunds=new Map(),sent=[];let serial=0;
+let autocompleteInput;
+let placesAvailable=true;
 globalThis.fetch=async(url,options={})=>{
   const value=String(url);
+  if(value==='https://places.googleapis.com/v1/places:autocomplete'){
+    if(!placesAvailable)return Response.json({error:{status:'PERMISSION_DENIED'}},{status:403});
+    autocompleteInput=JSON.parse(options.body);
+    return Response.json({suggestions:[
+      {placePrediction:{placeId:'country',types:['country'],text:{text:'New Zealand'}}},
+      {placePrediction:{placeId:'bethells',types:['locality'],text:{text:'Bethells Beach, Auckland, New Zealand'},structuredFormat:{mainText:{text:'Bethells Beach'},secondaryText:{text:'Auckland, New Zealand'}}}},
+      {placePrediction:{placeId:'road',types:['street_address'],text:{text:'10 Bethells Road, Auckland, New Zealand'},structuredFormat:{mainText:{text:'10 Bethells Road'},secondaryText:{text:'Auckland, New Zealand'}}}},
+    ]});
+  }
+  if(value.startsWith('https://places.googleapis.com/v1/places/'))return Response.json({location:{latitude:-36.89,longitude:174.45},addressComponents:[{types:['country'],shortText:'NZ'}]});
+  if(value.startsWith('https://photon.example.invalid/'))return Response.json({features:[
+    {properties:{name:'New Zealand',countrycode:'NZ'},geometry:{coordinates:[174,-41]}},
+    {properties:{name:'Bethel',countrycode:'US'},geometry:{coordinates:[-74,41]}},
+    {properties:{name:'Bethells Beach',countrycode:'NZ',city:'Auckland',osm_id:12},geometry:{coordinates:[174.45,-36.89]}},
+  ]});
   if(value.includes('routes.googleapis.com'))return Response.json({routes:[{distanceMeters:15000,duration:'1800s',legs:[{startLocation:{latLng:{latitude:-36.8,longitude:174.7}},endLocation:{latLng:{latitude:-36.9,longitude:174.8}}}]}]});
   if(value.includes('maps.googleapis.com'))return Response.json({status:'OK',results:[{place_id:'test-place',formatted_address:'Test Auckland address',geometry:{location:{lat:-36.8,lng:174.7}}}]});
   if(value==='https://api.resend.com/emails'){sent.push(JSON.parse(options.body));return Response.json({id:'email-test'});}
@@ -34,7 +51,8 @@ globalThis.fetch=async(url,options={})=>{
 };
 const {calculateQuote}=await import('../lib/pricing.ts');
 const {scheduledInstant,validateJourney}=await import('../lib/validation.ts');
-const {hmac,sha,verifyStripeEvent:unused}=await import('../lib/security.ts');void unused;
+const {hmac,sha,phone,verifyStripeEvent:unused}=await import('../lib/security.ts');void unused;
+const addressAPI=await import('../app/api/addresses/route.ts');
 const {verifyStripeEvent}=await import('../lib/stripe.ts');
 const {ensurePlatform,platformSchema}=await import('../lib/platform.ts');
 const quoteAPI=await import('../app/api/quotes/route.ts'),bookingAPI=await import('../app/api/bookings/route.ts'),webhookAPI=await import('../app/api/webhooks/stripe/route.ts'),opsAPI=await import('../app/api/operations/route.ts'),requestAPI=await import('../app/api/requests/route.ts'),authAPI=await import('../app/api/auth/route.ts');
@@ -47,6 +65,62 @@ async function book(q,extra={},key=q.id){const response=await bookingAPI.POST(re
 async function cookie(address){const raw=String(++serial).padStart(64,'0');await db.prepare('INSERT INTO app_sessions(token_hash,email,expires) VALUES(?,?,?)').bind(await sha(raw),address,Date.now()+600000).run();await db.prepare('INSERT INTO app_session_assurance(token_hash,expires) VALUES(?,?)').bind(await sha(raw),Date.now()+600000).run();return `cc_session=${raw}`;}
 async function paid(booking){const row=await db.prepare('SELECT * FROM bookings WHERE reference=?').bind(booking.reference).first(),detail=await db.prepare('SELECT * FROM app_booking_details WHERE booking_id=?').bind(row.id).first();const intent={id:`pi_test_${++serial}`,status:'succeeded',amount:detail.price_cents,currency:'nzd',metadata:{booking_id:row.id},latest_charge:`ch_test_${serial}`};intents.set(intent.id,intent);sessions.get(detail.checkout_id).status='complete';sessions.get(detail.checkout_id).payment_intent=intent.id;const event={id:`evt_${serial}`,type:'payment_intent.succeeded',data:{object:intent}};return {row,intent,event};}
 async function webhook(event){const body=JSON.stringify(event),timestamp=Math.floor(Date.now()/1000),signature=await hmac(`${timestamp}.${body}`,'whsec_fixture');return webhookAPI.POST(new Request('https://cruzycabs.co.nz/api/webhooks/stripe',{method:'POST',headers:{'stripe-signature':`t=${timestamp},v1=${signature}`},body}));}
+
+test('NZ phone formats normalize without requiring the customer to type +64',()=>{
+  for(const value of ['0271234567','027 123 4567','(027) 123-4567','64271234567','0064271234567','+64 27 123 4567'])assert.equal(phone(value),'+64271234567');
+  assert.equal(phone('021123456'),'+6421123456');
+  assert.equal(phone('02212345678'),'+642212345678');
+  assert.equal(phone('09 123 4567'),'+6491234567');
+  assert.equal(phone('+61 412 345 678'),'+61412345678');
+  for(const value of ['027','027abc4567','+640271234567','+6427','+64091234567','1234567'])assert.throws(()=>phone(value));
+});
+
+test('autocomplete searches incomplete input within NZ and excludes country-only results',async()=>{
+  const response=await addressAPI.GET(req('/api/addresses?q=bethel',undefined,{},'GET'));
+  assert.equal(response.status,200);
+  const {suggestions}=await response.json();
+  assert.deepEqual(autocompleteInput.includedRegionCodes,['nz']);
+  assert.equal(autocompleteInput.input,'bethel');
+  assert.equal(autocompleteInput.regionCode,'nz');
+  assert.equal(suggestions.length,2);
+  assert.equal(suggestions[0].primary,'Bethells Beach');
+  assert.equal(suggestions[1].label,'10 Bethells Road, Auckland, New Zealand');
+  assert.equal(suggestions[0].source,'google');
+});
+
+test('Photon suggestions exclude overseas and country-only results',async()=>{
+  const key=globalThis.__testEnv.GOOGLE_MAPS_API_KEY;
+  globalThis.__testEnv.GOOGLE_MAPS_API_KEY='';globalThis.__testEnv.PHOTON_API_URL='https://photon.example.invalid/api';
+  try {
+    const response=await addressAPI.GET(req('/api/addresses?q=bethel',undefined,{},'GET'));
+    assert.equal(response.status,200);
+    const {suggestions}=await response.json();
+    assert.equal(suggestions.length,1);assert.equal(suggestions[0].primary,'Bethells Beach');
+  } finally {globalThis.__testEnv.GOOGLE_MAPS_API_KEY=key;delete globalThis.__testEnv.PHOTON_API_URL;}
+});
+
+test('selected Google predictions resolve NZ coordinates for itinerary estimates',async()=>{
+  const response=await addressAPI.GET(req('/api/addresses?placeId=bethells',undefined,{},'GET'));
+  assert.equal(response.status,200);
+  assert.deepEqual(await response.json(),{latitude:-36.89,longitude:174.45});
+});
+
+test('Places permission errors fall back to NZ Photon suggestions',async()=>{
+  placesAvailable=false;globalThis.__testEnv.PHOTON_API_URL='https://photon.example.invalid/api';
+  try {
+    const response=await addressAPI.GET(req('/api/addresses?q=bethel',undefined,{},'GET'));
+    assert.equal(response.status,200);
+    const {suggestions}=await response.json();assert.equal(suggestions[0].primary,'Bethells Beach');assert.equal(suggestions[0].source,'photon');
+  } finally {placesAvailable=true;delete globalThis.__testEnv.PHOTON_API_URL;}
+});
+
+test('booking stores a local NZ mobile in international format',async()=>{
+  const q=await quote();
+  const {response,data}=await book(q,{customer:{name:'NZ Passenger',email:'nz@example.invalid',phone:'027 123 4567',notes:''}});
+  assert.equal(response.status,201);
+  const stored=await db.prepare('SELECT customer_phone FROM bookings WHERE reference=?').bind(data.reference).first();
+  assert.equal(stored.customer_phone,'+64271234567');
+});
 
 test('pricing uses road metrics, integer cents and strict capacities',()=>{const value=calculateQuote(journey,{distanceKm:15,durationMin:30});assert.equal(value.distanceKm,15);assert.equal(value.vehicles[0].priceCents,650+3525+1440+850);assert.ok(value.vehicles.every(v=>Number.isInteger(v.priceCents)));assert.deepEqual(calculateQuote({...journey,luggage:8},{distanceKm:15,durationMin:30}).vehicles,[]);});
 test('equipment and long-distance trips require review',()=>{assert.equal(calculateQuote({...journey,accessible:true},{distanceKm:15,durationMin:30}).state,'manual_review');assert.equal(calculateQuote(journey,{distanceKm:250,durationMin:200}).state,'manual_review');});

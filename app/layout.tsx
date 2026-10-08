@@ -10,7 +10,7 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     metadataBase: new URL(origin),
     title: {
-      default: "cruzycabs | Every road. One trusted ride.",
+      default: "cruzycabs | Be choosy. Ride Cruzy.",
       template: "%s | cruzycabs",
     },
     description:
@@ -20,13 +20,13 @@ export async function generateMetadata(): Promise<Metadata> {
     openGraph: {
       type: "website",
       siteName: "cruzycabs",
-      title: "cruzycabs | Every road. One trusted ride.",
+      title: "cruzycabs | Be choosy. Ride Cruzy.",
       description: "Upfront pricing for Auckland rides and private North Island journeys.",
-      ...(origin ? { images: [{ url: `${origin}/og.png`, width: 1733, height: 909, alt: "cruzycabs | Every road. One trusted ride." }] } : {}),
+      ...(origin ? { images: [{ url: `${origin}/og.png`, width: 1733, height: 909, alt: "cruzycabs | Be choosy. Ride Cruzy." }] } : {}),
     },
     twitter: {
       card: "summary_large_image",
-      title: "cruzycabs | Every road. One trusted ride.",
+      title: "cruzycabs | Be choosy. Ride Cruzy.",
       description: "Upfront pricing for Auckland rides and private North Island journeys.",
       ...(origin ? { images: [`${origin}/og.png`] } : {}),
     },

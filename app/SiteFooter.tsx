@@ -1,8 +1,10 @@
 import Link from "next/link";
+import { BrandLogo } from "./BrandLogo";
 export function SiteFooter() {
   return <footer className="site-footer">
     <div className="footer-brand">
-      <Link className="brand light" href="/" aria-label="cruzycabs home"><span className="brand-mark" aria-hidden="true"><i /><i /><i /></span><span>cruzycabs</span></Link>
+      <Link className="brand brand-logo-backing" href="/" aria-label="cruzycabs home"><BrandLogo /></Link>
+      <p className="footer-tagline">Be choosy. Ride Cruzy.</p>
       <p>Local rides, airport transfers and private North Island journeys, all in one place.</p>
     </div>
     <div><h3>Travel</h3><Link href="/#journey-form">Book a ride</Link><Link href="/airport-transfers">Airport transfers</Link><Link href="/accessible-travel">Accessible travel</Link><Link href="/private-tours">Private tours</Link></div>

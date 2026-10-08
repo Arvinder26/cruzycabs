@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { BrandLogo } from "./BrandLogo";
 type SiteHeaderProps = {
   activeSlug?: string;
   bookHref?: string;
@@ -26,8 +27,7 @@ function Navigation({ activeSlug }: { activeSlug?: string }) {
 export function SiteHeader({ activeSlug, bookHref = "/#journey-form", compact = false }: SiteHeaderProps) {
   return <header className={`site-header ${compact ? "compact-header" : ""}`}>
     <Link className="brand" href="/" aria-label="cruzycabs home">
-      <span className="brand-mark" aria-hidden="true"><i /><i /><i /></span>
-      <span>cruzycabs</span>
+      <BrandLogo priority />
     </Link>
     <nav className="desktop-nav" aria-label="Main navigation"><Navigation activeSlug={activeSlug} /></nav>
     <div className="header-actions">
