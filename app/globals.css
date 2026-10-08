@@ -11,7 +11,8 @@
   --kauri-dark: #0c2f27;
   --amber: #f4a62a;
   --cream: #f7f7f2;
-  --sage: #edf3ee;
+  --sage: #dfe8e1;
+  --sage-footer: #b2c7b9;
   --paper: #fff;
   --paper-warm: #fbfbf7;
   --ink: #17201d;
@@ -968,7 +969,7 @@ footer a:hover { text-decoration:underline; text-underline-offset:4px; }
 .vehicle-preview-grid h3 { margin:10px 0 8px; }
 .vehicle-preview-grid strong { display:block; font-size:14px; }
 .vehicle-preview-grid p { margin:6px 0 0; line-height:1.6; }
-.access-feature { grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:clamp(32px,6vw,88px); align-items:center; background:#edf3ee; color:var(--ink); }
+.access-feature { grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:clamp(32px,6vw,88px); align-items:center; background:var(--sage); color:var(--ink); }
 .access-feature .access-intro .eyebrow { color:var(--kauri); margin:20px 0 12px; }
 .access-icon { display:grid; place-items:center; width:64px; height:64px; background:var(--kauri); color:white; border-radius:16px; }
 .access-icon svg { width:42px; height:42px; }
@@ -1006,11 +1007,11 @@ body, main, .hero, .airport-feature, .support, .content-hero, .content-cta, .uti
 .utility-shell, .utility-header { color:var(--ink); }
 .utility-header { border-color:var(--line); }
 .utility-header .brand { color:var(--kauri); }
-.site-footer { border-top:1px solid var(--line); color:var(--muted); }
+.site-footer { background:var(--sage-footer); border-top:1px solid #9db6a5; color:#31463a; }
 .site-footer h3, .site-footer .footer-tagline, .site-footer a:hover { color:var(--kauri); }
-.site-footer .footer-brand p { color:var(--muted); }
+.site-footer .footer-brand p { color:#31463a; }
 .site-footer .footer-brand .footer-tagline { color:var(--kauri); }
-.footer-bottom { border-color:var(--line); }
+.footer-bottom { border-color:#8fa793; }
 .terminal-guide-head { background:var(--sage); color:var(--ink); }
 .terminal-guide-head > span, .terminal-guide-head strong { color:var(--kauri); border-color:#9db6a5; }
 .terminal-guide-head small { color:var(--muted); }
