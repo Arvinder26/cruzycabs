@@ -89,10 +89,8 @@ const services = [
 ];
 
 const vehiclePreviews = [
-  ["Car", "1 to 4 people", "Comfortable everyday travel"],
   ["Van", "1 to 7 people", "Groups and extra luggage"],
   ["Accessible", "Up to 4 + wheelchair", "Ramp or hoist matched"],
-  ["Executive", "1 to 3 people", "Business and private transfers"],
 ];
 
 const airportTerminals: { name: string; value: string; selection: AddressSelection }[] = [
@@ -286,7 +284,6 @@ export function KauriRideApp({onlinePricingAvailable=false,requestSubmissionAvai
       const data = (await response.json()) as { reference?: string; status?: string; error?: string; accessToken: string; checkoutUrl?: string; paymentMessage?: string };
       if (!response.ok || !data.reference) throw new Error(data.error || "Booking could not be completed.");
       sessionStorage.setItem(`cc:${data.reference}`, data.accessToken);
-      if (data.checkoutUrl) { window.location.assign(data.checkoutUrl); return; }
       setBooking({ reference: data.reference, status: data.status || "Request recorded", accessToken: data.accessToken, paymentMessage: data.paymentMessage });
       setStep("confirmed");
       setTimeout(() => document.getElementById("confirmation")?.focus(), 50);
@@ -441,12 +438,12 @@ export function KauriRideApp({onlinePricingAvailable=false,requestSubmissionAvai
                 <label>Email address<input required maxLength={254} value={customer.email} onChange={(e) => setCustomer({ ...customer, email: e.target.value })} type="email" autoComplete="email" /></label>
               </div>
               <label>Pickup or assistance notes <span className="optional">optional</span><textarea value={customer.notes} onChange={(e) => setCustomer({ ...customer, notes: e.target.value })} placeholder="Entrance, landmark or anything that would make the trip easier" /></label>
-              <p className="payment-choices">Card payments are handled securely by Stripe. Contact operations for cash or corporate arrangements.</p>
+              <p className="payment-choices">No payment now. Pay securely with Stripe after your booking is confirmed. Contact operations for cash or corporate arrangements.</p>
               <div className="review-total"><span>{selected.name}<small>{journey.when === "now" ? "Pickup requested now" : `${journey.date} at ${journey.time}`}</small></span><strong>{money(selected.priceCents)}<small>total NZD</small></strong></div>
-              <p className="preview-truth">{quote.state === "manual_review" ? "Operations reviews your requirements before requesting payment." : "Payment records your request. Travel is confirmed after a suitable driver accepts."} Cancel before your trip starts for a full refund.</p>
+              <p className="preview-truth">Your request is saved first. We check availability and confirm a suitable driver, then email you a secure payment link. Cancel before your trip starts for a full refund.</p>
               <label className="toggle-line"><input type="checkbox" required checked={termsAccepted} onChange={e=>setTermsAccepted(e.target.checked)} /><span>I accept the <Link href="/terms">terms and cancellation policy</Link>.</span></label>
               {error && <div className="error-summary" role="alert">{error}</div>}
-              <button className="button button-primary button-wide" disabled={loading}>{loading ? "Preparing your request…" : quote.state === "manual_review" ? "Request availability review" : "Continue to secure payment"}<span aria-hidden="true">→</span></button>
+              <button className="button button-primary button-wide" disabled={loading}>{loading ? "Preparing your request…" : "Submit booking request"}<span aria-hidden="true">→</span></button>
               <p className="terms">Your card details stay with Stripe. We use your contact details to fulfil this request; see our <Link href="/privacy">privacy policy</Link>.</p>
             </form>
           )}
@@ -454,12 +451,12 @@ export function KauriRideApp({onlinePricingAvailable=false,requestSubmissionAvai
           {step === "confirmed" && booking && (
             <section className="confirmation" id="confirmation" tabIndex={-1}>
               <span className="confirmation-mark" aria-hidden="true">✓</span>
-              <p className="eyebrow">{booking.status}</p>
+              <p className="eyebrow">Awaiting availability confirmation</p>
               <h2>Your request is safely recorded.</h2>
               <p className="reference">Booking reference <strong>{booking.reference}</strong></p>
               {booking.paymentMessage && <p role="status">{booking.paymentMessage}</p>}
               <div className="confirmation-route"><span>{journey.pickup}</span><i /><span>{journey.destination}</span></div>
-              <div className="truth-status"><strong>No driver assigned yet</strong><span>Driver matching follows operational checks. We won’t claim assignment until a driver accepts.</span></div>
+              <div className="truth-status"><strong>No driver assigned yet</strong><span>We are checking availability. Pay only after a suitable driver accepts and your booking is confirmed.</span></div>
               <div className="confirmation-actions"><Link className="button button-primary" href={`/manage-booking?ref=${booking.reference}#token=${booking.accessToken}`}>Manage booking</Link><button className="button button-ghost" type="button" onClick={() => navigator.clipboard?.writeText(booking.reference)}>Copy reference</button></div>
               <button className="text-button" type="button" onClick={resetBooking}>Book another ride</button>
             </section>
@@ -474,7 +471,7 @@ export function KauriRideApp({onlinePricingAvailable=false,requestSubmissionAvai
 
       <section className="steps section-pad">
         <div className="section-heading"><span className="eyebrow">Simple by design</span><h2>From address to answer<br />in three clear steps.</h2></div>
-        <div className="step-grid"><article><b>01</b><h3>Enter your journey</h3><p>Tell us where, when and how many people are travelling.</p></article><article><b>02</b><h3>Choose your vehicle</h3><p>Compare only vehicles that fit your trip and requirements.</p></article><article><b>03</b><h3>Confirm and track</h3><p>Book as a guest, then manage the ride through a secure link.</p></article></div>
+        <div className="step-grid"><article><b>01</b><h3>Enter your journey</h3><p>Tell us where, when and how many people are travelling.</p></article><article><b>02</b><h3>Choose your vehicle</h3><p>Compare only vehicles that fit your trip and requirements.</p></article><article><b>03</b><h3>Confirm, then pay</h3><p>Submit your request for free. We email a payment link after a suitable driver confirms.</p></article></div>
       </section>
 
       <section className="services section-pad" id="services">
@@ -495,7 +492,7 @@ export function KauriRideApp({onlinePricingAvailable=false,requestSubmissionAvai
 
       <section className="vehicles section-pad">
         <div className="section-heading split"><div><span className="eyebrow">Matched to the journey</span><h2>Space, access and comfort<br />made clear.</h2></div><p>Capacity means real passengers and practical luggage, not optimistic marketing.</p></div>
-        <div className="vehicle-preview-grid">{vehiclePreviews.map(([name, capacity, note], index) => <article key={name}><VehicleIcon kind={(["car", "van", "accessible", "executive"] as const)[index]} /><span>0{index + 1}</span><h3>{name}</h3><strong>{capacity}</strong><p>{note}</p></article>)}</div>
+        <div className="vehicle-preview-grid">{vehiclePreviews.map(([name, capacity, note], index) => <article key={name}><VehicleIcon kind={(["van", "accessible"] as const)[index]} /><span>0{index + 1}</span><h3>{name}</h3><strong>{capacity}</strong><p>{note}</p></article>)}</div>
       </section>
 
       <section className="access-feature section-pad">

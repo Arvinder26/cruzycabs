@@ -15,6 +15,9 @@ export async function authorisedBooking(request:Request,reference:string){
 export async function checkoutBooking(row:BookingRow){
   row=await findBooking(row.reference)||row;
   if(row.status!=="awaiting_payment")return {checkoutUrl:null};
+  if(row.payment_state!=="not_paid")return {checkoutUrl:null};
+  const confirmed=await getD1().prepare(`SELECT id FROM app_assignments WHERE booking_id=? AND state='accepted'`).bind(row.id).first();
+  if(!confirmed)throw new HttpError("Payment opens after a suitable driver confirms your booking.",409);
   const access=await managementToken(row.id);
   await getD1().prepare(`INSERT OR IGNORE INTO app_checkout_generation(booking_id,attempt) VALUES(?,0)`).bind(row.id).run();
   if(row.checkout_id){const session=await stripe(`checkout/sessions/${encodeURIComponent(row.checkout_id)}`);if(session.status==="open"&&session.url)return {checkoutUrl:session.url};if(session.status==="complete")return {checkoutUrl:null};
@@ -37,4 +40,4 @@ export async function cancelBooking(row:BookingRow,actor:string){
   const now=new Date().toISOString();row.payment_intent=refundPending?row.payment_intent:null;
   await getD1().batch([getD1().prepare(`UPDATE bookings SET status='cancelled',payment_state=?,updated_at=? WHERE id=? AND status='cancel_pending'`).bind(row.payment_intent?"refund_pending":"not_paid",now,row.id),getD1().prepare(`UPDATE app_drivers SET status='available' WHERE id IN (SELECT driver_id FROM app_assignments WHERE booking_id=? AND state NOT IN ('completed','declined','expired'))`).bind(row.id),getD1().prepare(`UPDATE app_assignments SET state='cancelled',updated_at=? WHERE booking_id=? AND state NOT IN ('completed','declined','expired')`).bind(now,row.id),audit("booking",row.id,"booking.cancelled",actor),queueEmail(`cancel:${row.id}`,row.customer_email,`Booking ${row.reference} cancelled`,"Your booking has been cancelled. Any completed card payment is being refunded in full. Your bank controls when it appears.")]);
 }
-export function bookingEmail(row:BookingRow,access:string){return queueEmail(`booking:${row.id}`,row.customer_email,`cruzycabs request ${row.reference}`,`Your request is recorded. Travel is confirmed only after a suitable driver accepts. Manage or pay for your booking: ${managementLink(row.reference,access)}`);}
+export function bookingEmail(row:BookingRow,access:string){return queueEmail(`booking:${row.id}`,row.customer_email,`cruzycabs request ${row.reference}`,`Your booking request is recorded. No payment is due yet. We will check availability and email you a secure payment link after a suitable driver accepts and your booking is confirmed. Manage your request: ${managementLink(row.reference,access)}`);}

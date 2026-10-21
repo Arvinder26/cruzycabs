@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 const questions = [
-  ["When is my ride confirmed?", "Your request is confirmed when a suitable driver accepts. Payment records your request; check your private booking link for the latest status and assigned vehicle."],
+  ["When is my ride confirmed?", "Your request is saved without payment. We check availability and confirm your booking when a suitable driver accepts, then email you a secure payment link. Pay before travel; your private booking link shows the latest status and assigned vehicle."],
   ["Can I change or cancel my booking?", "You can cancel through your private booking link before the trip starts. Completed card payments are refunded in full; your bank controls when the refund appears. Email operations to change the journey, date or vehicle."],
   ["Where will my airport driver meet me?", "Operations confirms the authorised meeting point for your terminal and vehicle. Collect your bags, check those instructions and match the driver and registration before boarding."],
   ["Can I book for someone else?", "Yes. Enter the passenger’s contact details so they receive the booking link and updates. Add any coordinator instructions in the pickup notes."],
