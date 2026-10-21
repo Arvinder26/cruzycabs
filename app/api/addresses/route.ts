@@ -51,8 +51,9 @@ function formatFeature(feature: PhotonFeature) {
   if (!primary) return null;
 
   const secondaryParts = uniqueParts([
-    properties.name && properties.name.toLowerCase() !== primary.toLowerCase() ? properties.name : undefined,
-    properties.locality,
+    // Street suggestions need the postal address, without estate/building names
+    // or smaller locality labels returned alongside the actual suburb.
+    streetAddress ? undefined : properties.locality,
     properties.district,
     properties.city,
     properties.county,

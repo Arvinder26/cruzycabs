@@ -16,6 +16,7 @@ globalThis.__testEnv={DB:db,SITE_URL:'https://cruzycabs.co.nz',APP_SIGNING_SECRE
 const sessions=new Map(),intents=new Map(),refunds=new Map(),sent=[];let serial=0;
 let autocompleteInput;
 let placesAvailable=true;
+let photonFixture=null;
 globalThis.fetch=async(url,options={})=>{
   const value=String(url);
   if(value==='https://places.googleapis.com/v1/places:autocomplete'){
@@ -28,7 +29,7 @@ globalThis.fetch=async(url,options={})=>{
     ]});
   }
   if(value.startsWith('https://places.googleapis.com/v1/places/'))return Response.json({location:{latitude:-36.89,longitude:174.45},addressComponents:[{types:['country'],shortText:'NZ'}]});
-  if(value.startsWith('https://photon.example.invalid/'))return Response.json({features:[
+  if(value.startsWith('https://photon.example.invalid/'))return Response.json({features:photonFixture||[
     {properties:{name:'New Zealand',countrycode:'NZ'},geometry:{coordinates:[174,-41]}},
     {properties:{name:'Bethel',countrycode:'US'},geometry:{coordinates:[-74,41]}},
     {properties:{name:'Bethells Beach',countrycode:'NZ',city:'Auckland',osm_id:12},geometry:{coordinates:[174.45,-36.89]}},
@@ -119,6 +120,20 @@ test('Photon suggestions exclude overseas and country-only results',async()=>{
     const {suggestions}=await response.json();
     assert.equal(suggestions.length,1);assert.equal(suggestions[0].primary,'Bethells Beach');
   } finally {globalThis.__testEnv.GOOGLE_MAPS_API_KEY=key;delete globalThis.__testEnv.PHOTON_API_URL;}
+});
+
+test('street suggestions omit estate and small locality labels but retain the postal address and coordinates',async()=>{
+  const key=globalThis.__testEnv.GOOGLE_MAPS_API_KEY;
+  globalThis.__testEnv.GOOGLE_MAPS_API_KEY='';globalThis.__testEnv.PHOTON_API_URL='https://photon.example.invalid/api';
+  photonFixture=[{properties:{housenumber:'17',street:'Example Street',name:'Example Estate',locality:'Example Development',district:'Example Suburb',city:'Example City',state:'Auckland',postcode:'2000',country:'New Zealand',countrycode:'NZ',osm_id:123},geometry:{coordinates:[174.8,-36.9]}}];
+  try{
+    const response=await addressAPI.GET(req('/api/addresses?q=example',undefined,{},'GET'));assert.equal(response.status,200);
+    const {suggestions}=await response.json();assert.equal(suggestions.length,1);
+    assert.equal(suggestions[0].primary,'17 Example Street');
+    assert.equal(suggestions[0].secondary,'Example Suburb, Example City, Auckland, 2000, New Zealand');
+    assert.equal(suggestions[0].label,'17 Example Street, Example Suburb, Example City, Auckland, 2000, New Zealand');
+    assert.equal(suggestions[0].latitude,-36.9);assert.equal(suggestions[0].longitude,174.8);
+  }finally{globalThis.__testEnv.GOOGLE_MAPS_API_KEY=key;delete globalThis.__testEnv.PHOTON_API_URL;photonFixture=null;}
 });
 
 test('selected Google predictions resolve NZ coordinates for itinerary estimates',async()=>{
