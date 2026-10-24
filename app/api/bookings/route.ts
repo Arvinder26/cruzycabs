@@ -3,7 +3,7 @@ import { POLICY_VERSION } from "../../../lib/config";
 import { identity } from "../../../lib/auth";
 import { ensurePlatform,rateLimit,audit } from "../../../lib/platform";
 import { authorisedBooking,bookingEmail,cancelBooking,checkoutBooking,findBooking } from "../../../lib/bookings";
-import { deliverOutbox } from "../../../lib/notifications";
+import { deliverOutbox,queueEmail } from "../../../lib/notifications";
 import { bearer,email,endpoint,equal,HttpError,json,managementToken,phone,readObject,sameOrigin,sha,text } from "../../../lib/security";
 export const runtime="nodejs";
 export function POST(request:Request){return endpoint(async()=>{
@@ -24,7 +24,21 @@ export function POST(request:Request){return endpoint(async()=>{
     getD1().prepare(`INSERT INTO bookings(id,reference,quote_id,idempotency_key,vehicle_id,customer_name,customer_email,customer_phone,journey_json,requirements_json,payment_method,payment_state,status,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,'card','not_paid',?,?,?)`).bind(id,reference,quoteId,key,vehicleId,name,address,mobile,quote.input_json,JSON.stringify({notes,bookingForOther:Boolean(body.bookingForOther)}),status,now,now),
     getD1().prepare(`INSERT INTO app_booking_details(booking_id,quote_id,fingerprint,price_cents,scheduled_at,terms_version,customer_identity,updated_at) VALUES(?,?,?,?,?,?,?,?)`).bind(id,quoteId,fingerprint,vehicle.priceCents,journey.scheduledAt||null,POLICY_VERSION,user?.email===address?user.userId:null,now),
     getD1().prepare(`INSERT INTO booking_status_events(id,booking_id,status,actor_type,note,created_at) VALUES(?,?,?,'customer','Request recorded',?)`).bind(crypto.randomUUID(),id,status,now),audit("booking",id,"booking.created","customer",{terms:POLICY_VERSION}),
-    bookingEmail({id,reference,customer_email:address} as Parameters<typeof bookingEmail>[0],access)
+    bookingEmail({id,reference,customer_email:address} as Parameters<typeof bookingEmail>[0],access),
+    queueEmail(`booking-ops:${id}`,"operations@cruzycabs.co.nz",`New booking request ${reference}`,
+      `A new booking request has been recorded.
+Reference: ${reference}
+Passenger: ${name}
+Email: ${address}
+Phone: ${mobile}
+Vehicle: ${vehicleId}
+Quoted fare: NZD ${(vehicle.priceCents/100).toFixed(2)}
+Status: ${status}
+Payment: not yet paid
+Journey: ${quote.input_json}
+Notes: ${notes || "None"}
+
+Review this request at https://cruzycabs.co.nz/dispatch. Travel is confirmed only after a suitable driver accepts.`)
   ]);}catch(error){const retry=await getD1().prepare(`SELECT b.reference,d.fingerprint,b.idempotency_key FROM bookings b JOIN app_booking_details d ON d.booking_id=b.id WHERE d.quote_id=?`).bind(quoteId).first<{reference:string;fingerprint:string;idempotency_key:string}>();if(!retry||retry.fingerprint!==fingerprint||retry.idempotency_key!==key)throw error;const row=await findBooking(retry.reference);if(!row)throw error;return json({reference:row.reference,status:row.status,accessToken:await managementToken(row.id),...await checkoutBooking(row)});}
   const row=await findBooking(reference);if(!row)throw new HttpError("Booking unavailable.",503);
   // Persist the booking first so a provider timeout can be safely retried with the same key.
