@@ -154,3 +154,16 @@ test('staff can onboard compliant fleet, assign once, and driver completes the s
 test('enquiry forms persist cases and send confirmation with idempotent retry',async()=>{const body={kind:'tour',name:'Test Enquirer',email:'enquirer@example.invalid',phone:'+64211234567',details:'Private tour request',consent:true},headers={'Idempotency-Key':'test-enquiry'};const first=await requestAPI.POST(req('/api/requests',body,headers)),second=await requestAPI.POST(req('/api/requests',body,headers));assert.equal(first.status,201);assert.equal(second.status,200);assert.equal((await first.json()).reference,(await second.json()).reference);assert.ok(sent.some(e=>e.subject.includes('enquiry')));});
 test('one-time email sign-in creates HttpOnly session and rejects code reuse',async()=>{const start=await authAPI.POST(req('/api/auth',{action:'request',email:'signin@example.invalid'}));assert.equal(start.status,200);const {challenge}=await start.json();const message=sent.findLast(e=>e.to[0]==='signin@example.invalid');const code=message.text.match(/code is (\d{6})/)[1];const verify=await authAPI.POST(req('/api/auth',{action:'verify',challenge,code}));assert.equal(verify.status,200);assert.match(verify.headers.get('set-cookie'),/HttpOnly; Secure; SameSite=Lax/);assert.equal((await authAPI.POST(req('/api/auth',{action:'verify',challenge,code}))).status,401);});
 test('production migration matches runtime schema and applies on a clean database',()=>{const sql=readFileSync(new URL('../drizzle/0001_production.sql',import.meta.url),'utf8');for(const statement of platformSchema)assert.ok(sql.includes(statement),statement);const fresh=new DatabaseSync(':memory:');fresh.exec(readFileSync(new URL('../drizzle/0000_thick_smiling_tiger.sql',import.meta.url),'utf8'));fresh.exec(sql);assert.ok(fresh.prepare("SELECT name FROM sqlite_master WHERE name='app_booking_details'").get());fresh.close();});
+
+ test('new bookings notify operations and passenger once across retries',async()=>{
+  const q=await quote(),{response,data}=await book(q);
+  assert.equal(response.status,201);
+  const messages=()=>sent.filter(e=>e.subject.includes(data.reference));
+  const ops=messages().filter(e=>e.to.includes('operations@cruzycabs.co.nz'));
+  assert.equal(ops.length,1);
+  assert.match(ops[0].text,/Test Customer/);
+  assert.match(ops[0].text,/Payment: not yet paid/);
+  assert.ok(messages().some(e=>e.to.includes('customer@example.invalid')));
+  assert.equal((await book(q)).response.status,200);
+  assert.equal(messages().filter(e=>e.to.includes('operations@cruzycabs.co.nz')).length,1);
+});
