@@ -4,6 +4,7 @@ import { identity } from "../../../lib/auth";
 import { ensurePlatform,rateLimit,audit } from "../../../lib/platform";
 import { authorisedBooking,bookingEmail,cancelBooking,checkoutBooking,findBooking } from "../../../lib/bookings";
 import { deliverOutbox } from "../../../lib/notifications";
+import { operationsBookingEmail } from "../../../lib/operations-email";
 import { bearer,email,endpoint,equal,HttpError,json,managementToken,phone,readObject,sameOrigin,sha,text } from "../../../lib/security";
 export const runtime="nodejs";
 export function POST(request:Request){return endpoint(async()=>{
@@ -25,7 +26,8 @@ export function POST(request:Request){return endpoint(async()=>{
     getD1().prepare(`INSERT INTO bookings(id,reference,quote_id,idempotency_key,vehicle_id,customer_name,customer_email,customer_phone,journey_json,requirements_json,payment_method,payment_state,status,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,'card','not_paid',?,?,?)`).bind(id,reference,quoteId,key,vehicleId,name,address,mobile,quote.input_json,JSON.stringify({notes,bookingForOther:Boolean(body.bookingForOther)}),status,now,now),
     getD1().prepare(`INSERT INTO app_booking_details(booking_id,quote_id,fingerprint,price_cents,scheduled_at,terms_version,customer_identity,updated_at) VALUES(?,?,?,?,?,?,?,?)`).bind(id,quoteId,fingerprint,vehicle.priceCents,journey.scheduledAt||null,POLICY_VERSION,user?.email===address?user.userId:null,now),
     getD1().prepare(`INSERT INTO booking_status_events(id,booking_id,status,actor_type,note,created_at) VALUES(?,?,?,'customer','Request recorded',?)`).bind(crypto.randomUUID(),id,status,now),audit("booking",id,"booking.created","customer",{terms:POLICY_VERSION}),
-    bookingEmail({id,reference,customer_email:address} as Parameters<typeof bookingEmail>[0],access)
+    bookingEmail({id,reference,customer_email:address} as Parameters<typeof bookingEmail>[0],access),
+    operationsBookingEmail({id,reference,customer_name:name,customer_email:address,customer_phone:mobile,journey_json:quote.input_json,requirements_json:JSON.stringify({notes,bookingForOther:Boolean(body.bookingForOther)}),vehicle_id:vehicleId,status,payment_state:"not_paid",price_cents:vehicle.priceCents,scheduled_at:journey.scheduledAt||null,created_at:now})
   ]);}catch(error){const retry=await getD1().prepare(`SELECT b.reference,d.fingerprint,b.idempotency_key FROM bookings b JOIN app_booking_details d ON d.booking_id=b.id WHERE d.quote_id=?`).bind(quoteId).first<{reference:string;fingerprint:string;idempotency_key:string}>();if(!retry||retry.fingerprint!==fingerprint||retry.idempotency_key!==key)throw error;const row=await findBooking(retry.reference);if(!row)throw error;return json({reference:row.reference,status:row.status,accessToken:await managementToken(row.id),checkoutUrl:null});}
   await deliverOutbox();return json({reference,status,accessToken:access,checkoutUrl:null,paymentMessage:"No payment is due yet. We will email you a secure payment link after a suitable driver confirms your booking."},201);
 });}

@@ -17,6 +17,7 @@ const sessions=new Map(),intents=new Map(),refunds=new Map(),sent=[];let serial=
 let autocompleteInput;
 let placesAvailable=true;
 let photonFixture=null;
+let emailFailure=false;
 globalThis.fetch=async(url,options={})=>{
   const value=String(url);
   if(value==='https://places.googleapis.com/v1/places:autocomplete'){
@@ -36,7 +37,7 @@ globalThis.fetch=async(url,options={})=>{
   ]});
   if(value.includes('routes.googleapis.com'))return Response.json({routes:[{distanceMeters:15000,duration:'1800s',legs:[{startLocation:{latLng:{latitude:-36.8,longitude:174.7}},endLocation:{latLng:{latitude:-36.9,longitude:174.8}}}]}]});
   if(value.includes('maps.googleapis.com'))return Response.json({status:'OK',results:[{place_id:'test-place',formatted_address:'Test Auckland address',geometry:{location:{lat:-36.8,lng:174.7}}}]});
-  if(value==='https://api.resend.com/emails'){sent.push(JSON.parse(options.body));return Response.json({id:'email-test'});}
+  if(value==='https://api.resend.com/emails'){if(emailFailure)return Response.json({name:'rate_limit_exceeded'},{status:429});sent.push(JSON.parse(options.body));return Response.json({id:'email-test'});}
   if(value.startsWith('https://api.stripe.com/v1/')){
     const path=value.split('/v1/')[1],fields=options.body?Object.fromEntries(new URLSearchParams(options.body)):{};
     if(path==='checkout/sessions'){
@@ -172,6 +173,29 @@ test('booking saves the server-priced request without opening payment',async()=>
   const responseBefore=await bookingAPI.PATCH(req('/api/bookings',{reference:data.reference,action:'checkout'},{Authorization:`Bearer ${data.accessToken}`}));assert.equal((await responseBefore.json()).checkoutUrl,null);assert.equal(sessions.size,before);
 });
 test('requests can be recorded while Stripe is unavailable',async()=>{const key=globalThis.__testEnv.STRIPE_SECRET_KEY;globalThis.__testEnv.STRIPE_SECRET_KEY='';try{const {response,data}=await book(await quote());assert.equal(response.status,201);assert.equal(data.checkoutUrl,null);}finally{globalThis.__testEnv.STRIPE_SECRET_KEY=key;}});
+
+test('operations receives full booking details once, including NZ schedule and assistance',async()=>{
+  const pickup=new Date(Date.now()+86400000),parts=Object.fromEntries(new Intl.DateTimeFormat('en-CA',{timeZone:'Pacific/Auckland',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(pickup).map(p=>[p.type,p.value]));
+  const q=await quote({when:'schedule',date:`${parts.year}-${parts.month}-${parts.day}`,time:`${parts.hour}:${parts.minute}`,accessible:true,wheelchair:'hoist',childSeat:true,pet:true,stops:['10 Queen Street'],airportTerminal:'International',flightNumber:'NZ123'});
+  const extra={vehicleId:'accessible',bookingForOther:true,customer:{name:'Dispatch Passenger',email:'dispatch-test@example.invalid',phone:'+64211234567',notes:'Meet by arrivals'}};
+  const {data,response}=await book(q,extra);assert.equal(response.status,201);
+  const messages=sent.filter(m=>m.to.includes('operations@cruzycabs.co.nz')&&m.subject.includes(data.reference));assert.equal(messages.length,1);
+  for(const value of ['Dispatch Passenger','dispatch-test@example.invalid','+64211234567','Auckland Airport','Ponsonby','10 Queen Street','Accessible taxi','Passengers: 2','Luggage: 1','hoist','Child seat: Required','Pet: Yes','International','NZ123','Meet by arrivals','New Zealand time','Booked for someone else: Yes','NZD','not paid','/dispatch'])assert.ok(messages[0].text.includes(value),value);
+  assert.ok(!messages[0].text.includes('#token='));
+  await book(q,extra);assert.equal(sent.filter(m=>m.to.includes('operations@cruzycabs.co.nz')&&m.subject.includes(data.reference)).length,1);
+});
+
+test('operations mail recovers active older bookings and retries provider failures without losing a booking',async()=>{
+  const {deliverOutbox}=await import('../lib/notifications.ts');
+  const {data}=await book(await quote());const row=await db.prepare('SELECT id FROM bookings WHERE reference=?').bind(data.reference).first();
+  await db.prepare('DELETE FROM app_outbox WHERE dedupe_key=?').bind(`operations-booking:${row.id}`).run();
+  await deliverOutbox();await deliverOutbox();assert.equal((await db.prepare('SELECT COUNT(*) n FROM app_outbox WHERE dedupe_key=?').bind(`operations-booking:${row.id}`).first()).n,1);
+  emailFailure=true;let failed;try{failed=await book(await quote());assert.equal(failed.response.status,201);}finally{emailFailure=false;}
+  const saved=await db.prepare('SELECT id FROM bookings WHERE reference=?').bind(failed.data.reference).first();
+  const pending=await db.prepare('SELECT state,attempts FROM app_outbox WHERE dedupe_key=?').bind(`operations-booking:${saved.id}`).first();assert.equal(pending.state,'pending');assert.equal(pending.attempts,1);
+  await db.prepare("UPDATE app_outbox SET next_attempt='2000-01-01' WHERE state='pending'").run();await deliverOutbox();
+  assert.equal(sent.filter(m=>m.to.includes('operations@cruzycabs.co.nz')&&m.subject.includes(failed.data.reference)).length,1);
+});
 test('removed vehicle classes cannot be booked from a previously issued quote',async()=>{for(const vehicleId of ['standard','executive']){const q=await quote();await db.prepare('UPDATE quotes SET result_json=? WHERE id=?').bind(JSON.stringify({...q,vehicles:[...q.vehicles,{id:vehicleId,priceCents:100}]}),q.id).run();assert.equal((await book(q,{vehicleId})).response.status,422);}});
 test('expired and unauthorised quotes cannot be booked',async()=>{const q=await quote();await db.prepare('UPDATE quotes SET locked_until=? WHERE id=?').bind('2020-01-01T00:00:00Z',q.id).run();assert.equal((await book(q)).response.status,409);const fresh=await quote();fresh.accessToken='wrong';assert.equal((await book(fresh)).response.status,403);});
 test('payment method and explicit policy consent are enforced',async()=>{const q=await quote();assert.equal((await book(q,{paymentMethod:'invalid'})).response.status,400);assert.equal((await book(q,{termsAccepted:false})).response.status,400);});
