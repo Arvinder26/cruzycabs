@@ -11,10 +11,16 @@ export const platformSchema = [
   `CREATE TABLE IF NOT EXISTS app_otp (id TEXT PRIMARY KEY, email TEXT NOT NULL, code_hash TEXT NOT NULL, expires INTEGER NOT NULL, attempts INTEGER NOT NULL DEFAULT 0, used INTEGER NOT NULL DEFAULT 0)`,
   `CREATE TABLE IF NOT EXISTS app_sessions (token_hash TEXT PRIMARY KEY, email TEXT NOT NULL, expires INTEGER NOT NULL)`,
   `CREATE TABLE IF NOT EXISTS app_drivers (id TEXT PRIMARY KEY, email TEXT NOT NULL UNIQUE, name TEXT NOT NULL, provider TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'offline', approved INTEGER NOT NULL DEFAULT 0, compliance_until TEXT NOT NULL, created_at TEXT NOT NULL)`,
+  `CREATE TABLE IF NOT EXISTS app_driver_contacts (driver_id TEXT PRIMARY KEY REFERENCES app_drivers(id), phone TEXT NOT NULL)`,
   `CREATE TABLE IF NOT EXISTS app_vehicles (id TEXT PRIMARY KEY, driver_id TEXT NOT NULL UNIQUE, class TEXT NOT NULL, plate TEXT NOT NULL UNIQUE, description TEXT NOT NULL, passengers INTEGER NOT NULL, luggage INTEGER NOT NULL, capabilities TEXT NOT NULL, compliance_until TEXT NOT NULL, active INTEGER NOT NULL DEFAULT 1)`,
   `CREATE TABLE IF NOT EXISTS app_assignments (id TEXT PRIMARY KEY, booking_id TEXT NOT NULL, driver_id TEXT NOT NULL, state TEXT NOT NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL)`,
   `CREATE UNIQUE INDEX IF NOT EXISTS app_one_booking_assignment ON app_assignments(booking_id) WHERE state NOT IN ('declined','expired','cancelled','completed')`,
-  `CREATE UNIQUE INDEX IF NOT EXISTS app_one_driver_assignment ON app_assignments(driver_id) WHERE state NOT IN ('declined','expired','cancelled','completed')`,
+  // Drivers may hold several pre-booked jobs; lib/driver-schedule.ts keeps their pickups apart.
+  `DROP INDEX IF EXISTS app_one_driver_assignment`,
+  `CREATE INDEX IF NOT EXISTS app_driver_assignments ON app_assignments(driver_id,state)`,
+  // Calendar invites for drivers: the .ics file sent with an outbox email, and the last invite sent per booking.
+  `CREATE TABLE IF NOT EXISTS app_outbox_attachments (outbox_key TEXT PRIMARY KEY, filename TEXT NOT NULL, content_type TEXT NOT NULL, content TEXT NOT NULL)`,
+  `CREATE TABLE IF NOT EXISTS app_calendar_invites (booking_id TEXT PRIMARY KEY, driver_email TEXT NOT NULL, sequence INTEGER NOT NULL, fingerprint TEXT NOT NULL, cancelled INTEGER NOT NULL DEFAULT 0, updated_at TEXT NOT NULL)`,
   `CREATE TABLE IF NOT EXISTS app_locations (driver_id TEXT PRIMARY KEY, latitude REAL NOT NULL, longitude REAL NOT NULL, accuracy REAL NOT NULL, observed_at TEXT NOT NULL)`,
   `CREATE TABLE IF NOT EXISTS app_stripe_events (id TEXT PRIMARY KEY, type TEXT NOT NULL, processed_at TEXT NOT NULL)`,
   `CREATE INDEX IF NOT EXISTS app_outbox_due ON app_outbox(state,next_attempt)`,
@@ -23,6 +29,9 @@ export const platformSchema = [
   `CREATE TABLE IF NOT EXISTS app_pricing (id TEXT PRIMARY KEY, rules_json TEXT NOT NULL, reason TEXT NOT NULL, author TEXT NOT NULL, created_at TEXT NOT NULL)`,
   `CREATE TABLE IF NOT EXISTS app_documents (id TEXT PRIMARY KEY, driver_id TEXT NOT NULL, storage_key TEXT NOT NULL UNIQUE, name TEXT NOT NULL, content_type TEXT NOT NULL, size INTEGER NOT NULL, created_at TEXT NOT NULL)`,
   `CREATE TABLE IF NOT EXISTS app_session_assurance (token_hash TEXT PRIMARY KEY, expires INTEGER NOT NULL)`,
+  `CREATE TABLE IF NOT EXISTS app_assignment_locations (assignment_id TEXT PRIMARY KEY, driver_id TEXT NOT NULL, latitude REAL NOT NULL, longitude REAL NOT NULL, accuracy REAL NOT NULL, observed_at TEXT NOT NULL)`,
+  `CREATE TABLE IF NOT EXISTS app_refunds (booking_id TEXT PRIMARY KEY, provider_id TEXT NOT NULL UNIQUE, state TEXT NOT NULL, amount_cents INTEGER NOT NULL, checked_at TEXT NOT NULL, updated_at TEXT NOT NULL)`,
+  `CREATE TABLE IF NOT EXISTS app_job_runs (id TEXT PRIMARY KEY, state TEXT NOT NULL, started_at TEXT NOT NULL, finished_at TEXT, error_category TEXT)`,
 ];
 let ready:Promise<void>|null=null;
 export async function ensurePlatform() {

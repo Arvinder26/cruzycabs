@@ -1,3 +1,7 @@
 import type { MetadataRoute } from "next";
-import { setting } from "../lib/config";
-export default function robots():MetadataRoute.Robots{return {rules:{userAgent:"*",allow:"/",disallow:["/admin","/dispatch","/driver","/partner","/account","/manage-booking","/sign-in","/api/"]},sitemap:`${setting("SITE_URL","https://cruzycabs.co.nz")}/sitemap.xml`};}
+import { publicOrigin, siteIndexable } from "../lib/seo";
+export default function robots(): MetadataRoute.Robots {
+  if (!siteIndexable()) return { rules: { userAgent: "*", disallow: "/" } };
+  // Let crawlers see noindex on account/workspace pages. Authentication protects data.
+  return { rules: { userAgent: "*", allow: "/", disallow: "/api/" }, sitemap: `${publicOrigin()}/sitemap.xml` };
+}

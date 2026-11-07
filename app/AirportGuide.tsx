@@ -28,7 +28,7 @@ export function AirportGuide() {
     </div>
     <aside className="airport-rank-note">
       <div><strong>Check your meeting point before you travel</strong><p>Taxi ranks, shuttle zones and private transfer lanes serve different vehicles. Use the instructions confirmed by operations.</p></div>
-      <a href="https://www.aucklandairport.co.nz/en/transport/taxis-and-shuttles" target="_blank" rel="noreferrer">Airport transport guide <span aria-hidden="true">↗</span></a>
+      <a href="https://www.aucklandairport.co.nz/transport/taxis-and-shuttles" target="_blank" rel="noreferrer">Airport transport guide <span aria-hidden="true">↗</span></a>
     </aside>
   </section>;
 }

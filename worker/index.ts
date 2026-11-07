@@ -1,8 +1,9 @@
 /** Cloudflare Worker entry point for the vinext-starter template. */
 import { handleImageOptimization, DEFAULT_DEVICE_SIZES, DEFAULT_IMAGE_SIZES } from "vinext/server/image-optimization";
 import handler from "vinext/server/app-router-entry";
-import { runJobs } from "../app/api/jobs/route";
+import { runJobs } from "../lib/jobs";
 import { setRuntimeEnv } from "../lib/runtime-env";
+import { analyticsContentSecurityPolicy, siteContentSecurityPolicy } from "../lib/content-security-policy";
 
 interface Env {
   ASSETS: Fetcher;
@@ -49,11 +50,11 @@ const worker = {
     const secured = new Response(response.body, response);
     secured.headers.set("X-Content-Type-Options","nosniff");
     secured.headers.set("Referrer-Policy","no-referrer");
-    secured.headers.set("X-Frame-Options","DENY");
+    secured.headers.set("X-Frame-Options",url.pathname === "/analytics-frame" ? "SAMEORIGIN" : "DENY");
     secured.headers.set("Permissions-Policy","camera=(), microphone=(), geolocation=(self)");
-    secured.headers.set("Content-Security-Policy", "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; font-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'");
+    secured.headers.set("Content-Security-Policy", url.pathname === "/analytics-frame" ? analyticsContentSecurityPolicy : siteContentSecurityPolicy);
     if(url.protocol==="https:")secured.headers.set("Strict-Transport-Security","max-age=31536000");
-    if (/^\/(api|account|manage-booking|admin|dispatch|driver|partner|sign-in)(\/|$)/.test(url.pathname)) { secured.headers.set("Cache-Control","no-store"); secured.headers.set("X-Robots-Tag","noindex, nofollow"); }
+    if (url.pathname === "/analytics-frame" || /^\/(api|account|manage-booking|thank-you|admin|dispatch|driver|partner|sign-in)(\/|$)/.test(url.pathname)) { secured.headers.set("Cache-Control","no-store"); secured.headers.set("X-Robots-Tag","noindex, nofollow"); }
     return secured;
   },
 };

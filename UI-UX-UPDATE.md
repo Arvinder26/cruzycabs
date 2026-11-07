@@ -1,3 +1,5 @@
+> Historical record: configuration and findings below describe their dated revision. Use [LAUNCH-CHECKLIST.md](LAUNCH-CHECKLIST.md) and [ARCHITECTURE.md](ARCHITECTURE.md) for the current Vercel activation and recovery procedure. Do not treat old missing-phone, hosting or payment-order statements as current status.
+
 # UI and booking experience update — 4 October 2026
 
 ## What changed

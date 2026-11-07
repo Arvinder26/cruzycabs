@@ -15,6 +15,34 @@
       "when": 1791072000000,
       "tag": "0001_production",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1793076600000,
+      "tag": "0002_audit_recovery",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1793159400000,
+      "tag": "0003_driver_contacts",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1793246400000,
+      "tag": "0004_multiple_driver_jobs",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1793250000000,
+      "tag": "0005_driver_calendar",
+      "breakpoints": true
     }
   ]
 }

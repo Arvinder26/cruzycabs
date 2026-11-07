@@ -1,18 +1,15 @@
-The requested deployment target is now Vercel. See [VERCEL-DEPLOYMENT.md](VERCEL-DEPLOYMENT.md) for the current setup; Cloudflare instructions below describe the previous hosting target.
-
 # cruzycabs
 
-Taxi booking and operations website for https://cruzycabs.co.nz. Contact: operations@cruzycabs.co.nz, operating 24/7.
+Next.js booking and operations website for https://cruzycabs.co.nz. Confirmed contact: 027 266 1398, operations@cruzycabs.co.nz. **Bookings open 24/7**; availability requires confirmation.
 
 ## Develop
 
-Use Node 24 and pnpm 11.16.0. Run `pnpm install --frozen-lockfile`, copy `.env.example` to `.dev.vars`, configure local settings, then `pnpm dev`. Local Cloudflare D1 supplies persistence. Never commit secrets. Explicit `LOCAL_PREVIEW=true` allows local staff preview only in development; deployed builds ignore it.
+Use Node 24 and the pinned pnpm version. Run `pnpm install --frozen-lockfile`, copy `.env.example` to `.env.local`, configure local test settings, then `pnpm dev`. Next reads `.env.local`; legacy Cloudflare `.dev.vars` instructions do not configure this release path. Never commit secrets or use production records for local fixtures. Read `AGENTS.md` and the installed Next documentation before changes.
 
-## Implemented
+## Current architecture and launch
 
-Server-priced Google road routing; expiring quote access; hosted Stripe Checkout; signed payment webhooks and refund recovery; secure guest management; email sign-in and staff TOTP; persisted dispatch and driver transitions; provider-scoped partner access; enquiry cases; account history and saved places; private compliance documents; configurable pricing; email outbox retries; audit records; safe offline page; metadata and security headers.
+Vercel/Next.js → Turso/libSQL; private Vercel Blob for compliance evidence. Production new booking requests require explicit `BOOKINGS_ENABLED=true` after acceptance; rebuild when activating. Existing management/cancellation and enquiries remain available while new requests pause. Payment opens only after a suitable driver accepts. Stripe test configuration is not live approval.
 
-Run `pnpm test`, `pnpm typecheck`, `pnpm lint`, and `pnpm build`. Tests use in-memory SQLite and mocked providers, so they do not charge cards or send external emails.
+[CURRENT-OPERATIONS.md](CURRENT-OPERATIONS.md) is the current activation, scheduling, refund exception, backup/restore and rollback procedure. [LAUNCH-CHECKLIST.md](LAUNCH-CHECKLIST.md) records gates. [WEBSITE-AUDIT.md](WEBSITE-AUDIT.md) contains acceptance criteria and fix status. Older deployment/design/SEO reports are historical records.
 
-See [LAUNCH-CHECKLIST.md](LAUNCH-CHECKLIST.md) for activation and remaining dependencies. Passing local checks does not activate production services.
-
+Run `pnpm test`, `pnpm typecheck`, `pnpm lint`, and `pnpm build`. Tests use isolated SQLite and mocked providers; no real charges, messages, refunds or assignments. Local browser evidence is separated from hosted/provider-backed acceptance.

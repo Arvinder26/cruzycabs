@@ -3,4 +3,4 @@ export const metadata:Metadata={title:'dispatch workspace',robots:{index:false,f
 import { OperationsConsole } from "../OperationsConsole";
 import { getStaffAccess, StaffAccessDenied } from "../staff-auth";
 export const dynamic = "force-dynamic";
-export default async function DispatchPage() { const access = await getStaffAccess("dispatch"); if (!access.user || !access.allowed) return <StaffAccessDenied reason={access.reason} />; return <OperationsConsole surface="dispatch" userEmail={access.user.email} />; }
+export default async function DispatchPage() { const access = await getStaffAccess("dispatch"); if (!access.user || !access.allowed) return <StaffAccessDenied reason={access.reason} returnTo="/dispatch" />; return <OperationsConsole surface="dispatch" userEmail={access.user.email} />; }

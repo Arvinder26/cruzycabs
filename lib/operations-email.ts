@@ -40,7 +40,7 @@ export function operationsBookingEmail(row: OperationsBooking) {
     "",
     `Quoted fare: NZD ${(row.price_cents / 100).toFixed(2)}`,
     `Payment: ${row.payment_state.replaceAll("_", " ")}`,
-    "Allocate a suitable driver. Payment is requested after driver confirmation.",
+    "Review the locked quoted fare and journey. Accept with an approved driver or decline; payment is requested after staff acceptance and assignment.",
     `Dispatch workspace (staff sign-in required): ${siteOrigin()}/dispatch`,
   ].join("\n");
   return queueEmail(`operations-booking:${row.id}`, setting("OPERATIONS_EMAIL") || setting("SUPPORT_EMAIL") || "operations@cruzycabs.co.nz", `New booking ${row.reference} — driver required`, text);

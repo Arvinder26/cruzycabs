@@ -8,7 +8,7 @@ export function BrandLogo({ priority = false }: { priority?: boolean }) {
       width={1672}
       height={941}
       sizes="220px"
-      priority={priority}
+      preload={priority}
     />
   </span>;
 }

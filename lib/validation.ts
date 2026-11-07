@@ -16,7 +16,7 @@ export function validateJourney(body: Record<string,unknown>,now=Date.now()): Qu
   const pickup=text(body.pickup,"Pickup"),destination=text(body.destination,"Destination");
   if(pickup.toLowerCase()===destination.toLowerCase()) throw new HttpError("Pickup and destination must differ.");
   if(body.when!=="now" && body.when!=="schedule") throw new HttpError("Select immediate or scheduled pickup.");
-  for(const [field,min,max] of [["passengers",1,7],["luggage",0,6]] as const) { const value=body[field]; if(typeof value!=="number" || !Number.isInteger(value) || value<min || value>max) throw new HttpError(`${field} must be between ${min} and ${max}.`); }
+  for(const [field,min,max] of [["passengers",1,10],["luggage",0,6]] as const) { const value=body[field]; if(typeof value!=="number" || !Number.isInteger(value) || value<min || value>max) throw new HttpError(`${field} must be between ${min} and ${max}.`); }
   for(const field of ["accessible","childSeat","pet"] as const) if(body[field]!==undefined && typeof body[field]!=="boolean") throw new HttpError(`Invalid ${field} preference.`);
   const stops=body.stops ?? []; if(!Array.isArray(stops) || stops.length>3) throw new HttpError("Up to three intermediate stops are supported.");
   const when=body.when;

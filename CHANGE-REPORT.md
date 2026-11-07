@@ -1,3 +1,5 @@
+> Historical record: configuration and findings below describe their dated revision. Use [LAUNCH-CHECKLIST.md](LAUNCH-CHECKLIST.md) and [ARCHITECTURE.md](ARCHITECTURE.md) for the current Vercel activation and recovery procedure. Do not treat old missing-phone, hosting or payment-order statements as current status.
+
 # Everything changed for cruzycabs
 
 This report covers the rebranding and deployment work completed in this chat. The workspace has no tracked source baseline, so Git cannot produce a reliable before-and-after diff. This is an implementation inventory, not a claim that every existing file was newly created.

@@ -45,3 +45,8 @@ yarn-error.log*
 /.pnpm-store/
 /node_modules.cloudflare/
 /.local/
+
+# local release snapshots, reports and logs
+/output/
+/.impeccable/
+*.log

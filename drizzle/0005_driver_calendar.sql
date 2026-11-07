@@ -1,0 +1,2 @@
+CREATE TABLE IF NOT EXISTS app_outbox_attachments (outbox_key TEXT PRIMARY KEY, filename TEXT NOT NULL, content_type TEXT NOT NULL, content TEXT NOT NULL);--> statement-breakpoint
+CREATE TABLE IF NOT EXISTS app_calendar_invites (booking_id TEXT PRIMARY KEY, driver_email TEXT NOT NULL, sequence INTEGER NOT NULL, fingerprint TEXT NOT NULL, cancelled INTEGER NOT NULL DEFAULT 0, updated_at TEXT NOT NULL);
