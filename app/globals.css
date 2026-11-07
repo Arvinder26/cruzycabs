@@ -1024,9 +1024,8 @@ footer a:hover { text-decoration:underline; text-underline-offset:4px; }
 .airport-picker { border-bottom:1px solid var(--line); margin:0 0 16px; }
 .airport-picker > summary { cursor:pointer; list-style:none; display:flex; align-items:center; justify-content:space-between; padding:10px 0; color:var(--kauri); font-size:13px; font-weight:600; min-height:44px; }
 .airport-picker > summary::-webkit-details-marker { display:none; }
-.airport-picker > summary span { font-size:20px; }
-.airport-picker[open] > summary span { transform:rotate(45deg); }
-.airport-picker legend { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); }
+.airport-picker > summary .airport-picker-icon { font-size:20px; }
+.airport-picker[open] > summary .airport-picker-icon { transform:rotate(45deg); }
 .time-target { white-space:nowrap; flex-shrink:0; }
 @media(max-width:560px) { .form-heading { gap:10px; }.time-target { font-size:10px; padding:6px 8px; }.hero-book-link { min-height:46px; }.hero-copy > .eyebrow { font-size:10px; } }
 /* Keep essential controls immediately visible instead of animating them in. */
@@ -1233,7 +1232,6 @@ body, main, .hero, .airport-feature, .support, .content-hero, .content-cta, .uti
 
 .booking-card .airport-picker { margin:0 0 10px; border:1px solid var(--line); border-radius:10px; background:#f7f9f6; }
 .booking-card .airport-picker > summary { min-height:40px; padding:6px 12px; font-size:13px; }
-.booking-card .airport-picker > summary span { font-size:inherit; transform:none; }
 .booking-card .airport-picker-label { display:inline-flex; align-items:center; gap:9px; }
 .booking-card .airport-picker-tag { padding:2px 6px; border-radius:5px; background:var(--kauri); color:#fff; font-size:9.5px!important; font-weight:800; letter-spacing:.1em; }
 .booking-card .airport-picker > summary .airport-picker-icon { font-size:18px; line-height:1; transition:transform .18s; }
