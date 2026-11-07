@@ -25,6 +25,7 @@ type QuoteVehicle = {
   multiplier: number;
   journeyMultiplier: number;
   petFeeCents: number;
+  positioningFeeCents?: number;
   gstLabel: string;
   gstIncludedCents: number;
   badge?: string;
@@ -40,6 +41,7 @@ type Quote = {
   reviewReasons?: string[];
   distanceKm: number;
   durationMin: number;
+  positioning?: { from: string; minutes: number; feeCents: number } | null;
   vehicles: QuoteVehicle[];
   breakdown: { label: string; amountCents: number }[];
   explanation: string;
@@ -137,37 +139,37 @@ function money(cents: number) {
   }).format(cents / 100);
 }
 
-function AirportShortcutCards({
-  label,
-  target,
+function AirportShortcuts({
   journey,
   onSelect,
 }: {
-  label: string;
-  target: "pickup" | "destination";
   journey: Journey;
   onSelect: (terminal: (typeof airportTerminals)[number], target: "pickup" | "destination") => void;
 }) {
-  const selectedLocation = target === "pickup" ? journey.pickupLocation : journey.destinationLocation;
-  return <details className="airport-picker"><summary>{label}<span aria-hidden="true">+</span></summary><fieldset className="airport-shortcuts">
-    <legend>{label}</legend>
-    <div>
-      {airportTerminals.map((terminal) => {
-        const selectedTerminal = selectedLocation?.id === terminal.selection.id;
-        return <button
-          className={selectedTerminal ? "selected" : ""}
-          type="button"
-          key={`${target}-${terminal.value}`}
-          aria-pressed={selectedTerminal}
-          onClick={() => onSelect(terminal, target)}
-        >
-          <span>AKL</span>
-          <strong>{terminal.name}</strong>
-          <small>{selectedTerminal ? `${target === "pickup" ? "Pickup" : "Destination"} selected` : `Use as ${target}`}</small>
-        </button>;
+  const chosen = [journey.pickupLocation, journey.destinationLocation].some((location) => airportTerminals.some((terminal) => terminal.selection.id === location?.id));
+  return <details className="airport-picker" open={chosen || undefined}><summary><span className="airport-picker-label"><span className="airport-picker-tag" aria-hidden="true">AKL</span>Airport trip? Pick a terminal</span><span className="airport-picker-icon" aria-hidden="true">+</span></summary>
+    <div className="airport-shortcuts">
+      {(["pickup", "destination"] as const).map((target) => {
+        const selectedLocation = target === "pickup" ? journey.pickupLocation : journey.destinationLocation;
+        return <fieldset key={target}>
+          <legend>{target === "pickup" ? "Pickup from" : "Drop-off at"}</legend>
+          <div>
+            {airportTerminals.map((terminal) => {
+              const selectedTerminal = selectedLocation?.id === terminal.selection.id;
+              return <button
+                className={selectedTerminal ? "selected" : ""}
+                type="button"
+                key={`${target}-${terminal.value}`}
+                aria-pressed={selectedTerminal}
+                aria-label={`${target === "pickup" ? "Pickup from" : "Drop-off at"} Auckland Airport ${terminal.name}`}
+                onClick={() => onSelect(terminal, target)}
+              >{terminal.value}</button>;
+            })}
+          </div>
+        </fieldset>;
       })}
     </div>
-  </fieldset></details>;
+  </details>;
 }
 
 export function KauriRideApp({onlinePricingAvailable=false,requestSubmissionAvailable=true,vansOnly=false}:{onlinePricingAvailable?:boolean;requestSubmissionAvailable?:boolean;vansOnly?:boolean}) {
@@ -410,9 +412,9 @@ export function KauriRideApp({onlinePricingAvailable=false,requestSubmissionAvai
             <form onSubmit={requestQuote} noValidate>
               <div className="form-heading">
                 <div><span className="kicker">Your journey</span><h2 ref={stepHeading} tabIndex={-1}>Where are you going?</h2></div>
-                <span className="time-target">About 60 sec</span>
+                <span className="time-target">~60 sec</span>
               </div>
-              <AirportShortcutCards label="Quick airport pickup" target="pickup" journey={journey} onSelect={selectAirportTerminal} />
+              <AirportShortcuts journey={journey} onSelect={selectAirportTerminal} />
               <AddressAutocomplete
                 label="Pickup address"
                 value={journey.pickup}
@@ -421,9 +423,8 @@ export function KauriRideApp({onlinePricingAvailable=false,requestSubmissionAvai
                 onChange={(value) => updateAddress("pickup", value)}
                 onSelect={(selection) => selectAddress("pickup", selection)}
               />
-              {journey.stops.map((stop,index) => <div className="form-row" key={index}><label>Stop {index+1}<input value={stop} onChange={e=>update("stops",journey.stops.map((value,i)=>i===index?e.target.value:value))} maxLength={250} required /></label><button type="button" className="text-button" onClick={()=>update("stops",journey.stops.filter((_,i)=>i!==index))}>Remove stop {index+1}</button></div>)}
-              <button className="text-button" type="button" disabled={journey.stops.length>=3} onClick={() => update("stops", [...journey.stops, ""])}>+ Add stop</button>
-              <AirportShortcutCards label="Quick airport destination" target="destination" journey={journey} onSelect={selectAirportTerminal} />
+              {journey.stops.map((stop,index) => <div className="form-row stop-row" key={index}><label>Stop {index+1}<input value={stop} onChange={e=>update("stops",journey.stops.map((value,i)=>i===index?e.target.value:value))} maxLength={250} required /></label><button type="button" className="text-button" onClick={()=>update("stops",journey.stops.filter((_,i)=>i!==index))}>Remove stop {index+1}</button></div>)}
+              <button className="text-button add-stop" type="button" disabled={journey.stops.length>=3} onClick={() => update("stops", [...journey.stops, ""])}>+ Add stop</button>
               <AddressAutocomplete
                 label="Destination"
                 value={journey.destination}
@@ -433,23 +434,26 @@ export function KauriRideApp({onlinePricingAvailable=false,requestSubmissionAvai
                 onChange={(value) => updateAddress("destination", value)}
                 onSelect={(selection) => selectAddress("destination", selection)}
               />
-              <div className="segmented" aria-label="Pickup time">
-                <button type="button" className={journey.when === "now" ? "selected" : ""} aria-pressed={journey.when === "now"} onClick={() => update("when", "now")}>Now</button>
-                <button type="button" className={journey.when === "schedule" ? "selected" : ""} aria-pressed={journey.when === "schedule"} onClick={() => update("when", "schedule")}>Schedule</button>
+              <div className="trip-row">
+                <div className="trip-when">
+                  <span className="field-label" id="pickup-time-label">Pickup time</span>
+                  <div className="segmented" role="group" aria-labelledby="pickup-time-label">
+                    <button type="button" className={journey.when === "now" ? "selected" : ""} aria-pressed={journey.when === "now"} onClick={() => update("when", "now")}>Now</button>
+                    <button type="button" className={journey.when === "schedule" ? "selected" : ""} aria-pressed={journey.when === "schedule"} onClick={() => update("when", "schedule")}>Schedule</button>
+                  </div>
+                </div>
+                <label>Passengers<select value={journey.passengers} onChange={(event) => update("passengers", Number(event.target.value))}>{[1,2,3,4,5,6,7,8,9,10].map((n) => <option key={n} value={n}>{n}</option>)}</select></label>
+                <label>Bags<select aria-label="Luggage" value={journey.luggage} onChange={(event) => update("luggage", Number(event.target.value))}>{[0,1,2,3,4,5,6].map((n) => <option key={n} value={n}>{n}</option>)}</select></label>
               </div>
-              {journey.when === "schedule" && <><p id="schedule-guidance" className="schedule-guidance">New Zealand pickup time (Pacific/Auckland). Choose at least 15 minutes ahead and within 90 days. Daylight-saving times are checked before quoting.</p><div className="form-row reveal">
+              {journey.when === "schedule" && <div className="schedule-block reveal"><div className="form-row">
                 <label>Date<input aria-describedby="schedule-guidance" type="date" value={journey.date} onChange={(event) => update("date", event.target.value)} /></label>
                 <label>Time<input aria-describedby="schedule-guidance" type="time" value={journey.time} onChange={(event) => update("time", event.target.value)} /></label>
-              </div></>}
-              {vansOnly && <p className="review-notice vans-only">Vans only for now: up to 10 passengers and 6 bags. Wheelchair-accessible vehicles are not available at the moment.</p>}
-              <div className="form-row counts">
-                <label>Passengers<select value={journey.passengers} onChange={(event) => update("passengers", Number(event.target.value))}>{[1,2,3,4,5,6,7,8,9,10].map((n) => <option key={n} value={n}>{n}</option>)}</select></label>
-                <label>Luggage<select value={journey.luggage} onChange={(event) => update("luggage", Number(event.target.value))}>{[0,1,2,3,4,5,6].map((n) => <option key={n} value={n}>{n}</option>)}</select></label>
-              </div>
-              <div className="quick-needs">
-                <label><input type="checkbox" checked={journey.accessible} onChange={(e) => update("accessible", e.target.checked)} /> Wheelchair-accessible</label>
+              </div><p id="schedule-guidance" className="schedule-guidance">New Zealand time. At least 15 minutes ahead, within 90 days.</p></div>}
+              {vansOnly && <p className="review-notice vans-only">Vans only for now: up to 10 passengers and 6 bags.</p>}
+              <div className="quick-needs" role="group" aria-label="Extra requirements">
+                <label><input type="checkbox" checked={journey.accessible} onChange={(e) => update("accessible", e.target.checked)} /> Wheelchair</label>
                 <label><input type="checkbox" checked={journey.childSeat} onChange={(e) => update("childSeat", e.target.checked)} /> Child seat</label>
-                <label><input type="checkbox" checked={journey.pet} onChange={(e) => update("pet", e.target.checked)} /> Pet-friendly</label>
+                <label><input type="checkbox" checked={journey.pet} onChange={(e) => update("pet", e.target.checked)} /> Pet</label>
               </div>
               {journey.accessible && vansOnly && <p className="review-notice" role="status">We don’t have a wheelchair-accessible vehicle running right now. Send an enquiry and operations will tell you whether we can help.</p>}
               {journey.accessible && <label>Wheelchair assistance<select value={journey.wheelchair} onChange={e=>update("wheelchair",e.target.value)}><option value="ramp">Passenger remains seated · ramp required</option><option value="hoist">Passenger remains seated · hoist required</option><option value="transfer">Passenger transfers into vehicle seat</option></select></label>}
@@ -470,6 +474,7 @@ export function KauriRideApp({onlinePricingAvailable=false,requestSubmissionAvai
             <section id="quote-results" tabIndex={-1} aria-live="polite">
               <div className="form-heading compact"><div><span className="kicker">Price & vehicle</span><h2 ref={stepHeading} tabIndex={-1}>Choose what fits</h2></div><button className="text-button" onClick={() => setStep("journey")}>Edit journey</button></div>
               <div className="journey-summary"><strong>{journey.pickup}</strong><span>to</span><strong>{journey.destination}</strong><small>{journey.passengers} {journey.passengers === 1 ? "passenger" : "passengers"} · {journey.luggage} {journey.luggage === 1 ? "bag" : "bags"} · {quote.distanceKm} km · about {quote.durationMin} min · {quote.pricingVersion}</small></div>
+              {(quote.positioning?.feeCents ?? 0) > 0 && <p className="positioning-note">Includes a {money(quote.positioning!.feeCents)} driver travel fee — your pickup is about {quote.positioning!.minutes} min from our {quote.positioning!.from.split(",")[0]} base.</p>}
               {vansOnly && <p className="review-notice vans-only">Only vans are running at the moment. The price is for the whole van, not per person.</p>}
               {quote.state === "manual_review" && <div className="review-notice">Operations needs to review {(quote.reviewReasons?.length?quote.reviewReasons:reviewReasons(journey,quote.distanceKm)).join(", ")||"your journey requirements"} before finding a suitable driver. No payment is due during review.</div>}
               <div className="vehicle-options">
@@ -486,6 +491,7 @@ export function KauriRideApp({onlinePricingAvailable=false,requestSubmissionAvai
                 {selected.journeyMultiplier !== 1 && <div><span>Long-distance journey factor</span><span>{selected.journeyMultiplier}×</span></div>}
                 {selected.multiplier !== 1 && <div><span>{selected.name} vehicle factor</span><span>{selected.multiplier}×</span></div>}
                 {selected.petFeeCents > 0 && <div><span>Pet request</span><span>{money(selected.petFeeCents)}</span></div>}
+                {(selected.positioningFeeCents ?? 0) > 0 && quote.positioning && <div><span>Driver travel to pickup ({quote.positioning.minutes} min from {quote.positioning.from.split(",")[0]})</span><span>{money(selected.positioningFeeCents ?? 0)}</span></div>}
                 <div><span>{selected.gstLabel}</span><span>{money(selected.gstIncludedCents)}</span></div>
                 <div className="breakdown-total"><strong>Selected total</strong><strong>{money(selected.priceCents)}</strong></div>
                 <p>{quote.explanation}</p>

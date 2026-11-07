@@ -234,7 +234,7 @@ export function AddressAutocomplete({
         </div>
       )}
 
-      <span id={helpId} className={`address-help ${hasConfirmedValue ? "confirmed" : ""}`}>
+      <span id={helpId} className={`address-help ${hasConfirmedValue ? "confirmed" : trimmedValue.length > 0 && trimmedValue.length < 3 ? "" : "idle"}`}>
         {hasConfirmedValue
           ? selection?.source === "manual"
             ? "✓ Address accepted as entered"

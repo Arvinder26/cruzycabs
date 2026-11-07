@@ -120,6 +120,7 @@ export default async function ContentPage({ params }: { params: Promise<{ slug: 
         <div role="row"><span role="cell">Auckland time</span><strong role="cell">${(rates.cityMinuteCents/100).toFixed(2)} / min</strong><small role="cell">Route duration</small></div>
         <div role="row"><span role="cell">Long-distance rates</span><strong role="cell">${(rates.longKmCents/100).toFixed(2)} / km + ${(rates.longMinuteCents/100).toFixed(2)} / min</strong><small role="cell">Plus ${(rates.returnKmCents/100).toFixed(2)} / km return allowance and 1.55× journey factor</small></div>
         <div role="row"><span role="cell">Allowances</span><strong role="cell">Schedule ${(rates.scheduledCents/100).toFixed(2)} · Airport ${(rates.airportCents/100).toFixed(2)}</strong><small role="cell">Child seat ${(rates.childSeatCents/100).toFixed(2)} · Pet ${(rates.petCents/100).toFixed(2)}</small></div>
+        <div role="row"><span role="cell">Driver travel to pickup</span><strong role="cell">${(rates.positioningMinuteCents/100).toFixed(2)} / min</strong><small role="cell">When the pickup is {rates.positioningThresholdMin}+ min from our Takanini base, for the full one-way drive</small></div>
       </div>
       <div className="vehicle-factors"><span>Van 1.48×</span><span>Accessible 1.36×</span></div>
       <p className="pricing-note">GST is included. Live demand pricing is not applied. Your quote itemises allowances and vehicle factors.</p>
