@@ -466,7 +466,7 @@ export function KauriRideApp({onlinePricingAvailable=false,requestSubmissionAvai
               </fieldset>}
               {error && <><div className="error-summary" role="alert">{error}</div>{recovery}</>}
               <button className="button button-primary button-wide" disabled={loading}>{loading ? "Checking your journey…" : onlinePricingAvailable ? "Get route price" : "Send a booking enquiry"}<span aria-hidden="true">→</span></button>
-              <p className="assurance">{onlinePricingAvailable ? "Full price shown before confirmation. Guest booking available." : "See your estimated price, then send your enquiry. Operations confirms the final fare and availability."}</p>
+              <p className="assurance">{onlinePricingAvailable ? "Full price shown before confirmation." : "Operations confirms your final fare and availability."} <Link href="/pricing">See rates and example fares</Link></p>
             </form>
           )}
 

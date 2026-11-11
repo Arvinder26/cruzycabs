@@ -60,7 +60,8 @@ export function POST(request:Request){return endpoint(async()=>{
   if(action==="pricing"){
     if(!hasRole(user.email,"admin"))throw new HttpError("Admin permission required.",403);
     const values=body.rules;if(!values||typeof values!=="object"||Array.isArray(values))throw new HttpError("Pricing rules are required.");
-    const rules={...defaultPricing,version:`CC-${crypto.randomUUID().slice(0,8)}`};for(const key of Object.keys(defaultPricing).filter(key=>key!=="version") as (keyof Omit<typeof defaultPricing,"version">)[]){const n=(values as Record<string,unknown>)[key];if(typeof n!=="number"||!Number.isInteger(n)||n<0||n>100000)throw new HttpError("Rates must be integer cents between zero and 100000.");rules[key]=n;}
+    const rules={...defaultPricing,version:`CC-${crypto.randomUUID().slice(0,8)}`};for(const key of Object.keys(defaultPricing).filter(key=>key!=="version") as (keyof Omit<typeof defaultPricing,"version">)[]){const n=(values as Record<string,unknown>)[key];if(typeof n!=="number"||!Number.isInteger(n)||n<0||n>100000)throw new HttpError("Rates, minutes and vehicle factors must be whole numbers from 0 to 100000.");rules[key]=n;}
+    if(rules.vanPercent<=0||rules.accessiblePercent<=rules.vanPercent)throw new HttpError("The van factor must be positive and the accessible van factor must be higher.");
     const reason=text(body.note,"Pricing change reason",2000);await getD1().batch([getD1().prepare(`INSERT INTO app_pricing(id,rules_json,reason,author,created_at) VALUES(?,?,?,?,?)`).bind(rules.version,JSON.stringify(rules),reason,user.email,now),audit("pricing",rules.version,"pricing.published",user.email,{reason,rules})]);return json({ok:true});
   }
   if(action==="onboard"){

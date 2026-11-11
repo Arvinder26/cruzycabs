@@ -448,6 +448,14 @@ footer > div:not(.footer-brand):not(.footer-bottom) a:hover { color: white; tran
 .content-facts h2 { font-size: 23px; margin: 34px 0 8px; }
 .content-facts p { color: var(--muted); }
 .pricing-details { background: white; }
+.pricing-examples { width: 100%; border-collapse: collapse; text-align: left; }
+.pricing-examples th, .pricing-examples td { border-bottom: 1px solid #dce1dc; padding: 14px 8px; }
+.pricing-examples th:first-child { padding-left: 0; }
+.pricing-examples th:not(:first-child), .pricing-examples td { text-align: right; }
+.pricing-examples td { color: var(--kauri); font-weight: 800; white-space: nowrap; }
+.pricing-examples small { display: block; color: var(--muted); font-weight: 400; }
+.pricing-rate-heading { margin-top: 48px; }
+.pricing-details a, .booking-card .assurance a { color: var(--kauri); font-weight: 800; text-decoration: underline; text-underline-offset: 3px; }
 .pricing-table { border-top: 1px solid #cad2cc; }
 .pricing-table > div { display: grid; grid-template-columns: 1fr .8fr 1.2fr; gap: 24px; align-items: center; padding: 20px 0; border-bottom: 1px solid #dce1dc; }
 .pricing-table span { font-weight: 800; }
@@ -479,6 +487,7 @@ footer > div:not(.footer-brand):not(.footer-bottom) a:hover { color: white; tran
   .review-callout { margin: 0 20px 65px; grid-template-columns: 1fr; }.review-callout p { margin-top: 8px; }
   .simple-footer { display: grid; gap: 12px; }.simple-footer a { margin: 0 16px 0 0; }
   .pricing-table > div { grid-template-columns: 1fr; gap: 4px; }
+  .pricing-examples { font-size: 13px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

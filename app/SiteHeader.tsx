@@ -12,6 +12,7 @@ const links = [
   { label: "North Island", href: "/north-island-transfers", slug: "north-island-transfers" },
   { label: "Accessibility", href: "/accessible-travel", slug: "accessible-travel" },
   { label: "Business", href: "/business-travel", slug: "business-travel" },
+  { label: "Pricing", href: "/pricing", slug: "pricing" },
   { label: "Help", href: "/help", slug: "help" },
 ];
 
